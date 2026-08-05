@@ -1,0 +1,17 @@
+-- 🆕 EPIC 25 (US-25.04) — "documento de respaldo" del reembolso excepcional
+-- por fallecimiento o servicio funerario. Se agrega un valor propio del
+-- catálogo (mismo criterio que 'certificado_dialisis' en EPIC 15: cada tipo
+-- representa el propósito del documento, ver comentario de
+-- 20260729000009_create_documentos.sql) en vez de reutilizar 'otro' — el
+-- certificado de defunción es un documento distinto, con su propia
+-- clasificación de sensibilidad (ver siguiente migración).
+--
+-- Para el caso de cirugía (US-25.01) se reutiliza 'certificado_medico', que
+-- ya encaja semánticamente y ya está clasificado como médico-sensible — no
+-- se agrega un valor de enum nuevo para ese caso.
+--
+-- En su propia migración (transacción propia, ya comprometida antes de que
+-- cualquier otra migración/función la use): Postgres no permite usar un
+-- valor de enum recién agregado dentro de la misma transacción en que se
+-- agregó (mismo patrón que 20260730000001_add_pendiente_stock_estado_solicitud.sql).
+alter type public.tipo_documento add value 'certificado_defuncion';
