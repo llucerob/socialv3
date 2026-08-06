@@ -4,12 +4,12 @@ import type { Solicitud, SolicitudConRelaciones, HistorialCambioSolicitud } from
 
 type FilaConRelaciones = Solicitud & {
   grupos_familiares: { direccion: string } | null
-  tipos_ayuda: { nombre: string } | null
+  tipos_ayuda: { nombre: string; tipo: string } | null
   personas: { nombres: string; apellidos: string } | null
 }
 
 const SELECT_CON_RELACIONES =
-  '*, grupos_familiares(direccion), tipos_ayuda(nombre), personas(nombres, apellidos)'
+  '*, grupos_familiares(direccion), tipos_ayuda(nombre, tipo), personas(nombres, apellidos)'
 
 function mapear(fila: FilaConRelaciones): SolicitudConRelaciones {
   const { grupos_familiares, tipos_ayuda, personas, ...solicitud } = fila
@@ -17,6 +17,7 @@ function mapear(fila: FilaConRelaciones): SolicitudConRelaciones {
     ...solicitud,
     grupo_familiar_direccion: grupos_familiares?.direccion ?? '',
     tipo_ayuda_nombre: tipos_ayuda?.nombre ?? '',
+    tipo_ayuda_tipo: tipos_ayuda?.tipo ?? '',
     persona_nombre: personas ? `${personas.nombres} ${personas.apellidos}` : null,
   }
 }

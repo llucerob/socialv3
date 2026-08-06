@@ -48,6 +48,10 @@ export type Solicitud = {
 export type SolicitudConRelaciones = Solicitud & {
   grupo_familiar_direccion: string
   tipo_ayuda_nombre: string
+  // lib/ayudas/types.ts: TipoAyuda.tipo ('material' | 'reembolso', texto
+  // libre) — necesario para poder filtrar solicitudes de reembolso sin
+  // depender del nombre exacto del tipo de ayuda.
+  tipo_ayuda_tipo: string
   persona_nombre: string | null
 }
 

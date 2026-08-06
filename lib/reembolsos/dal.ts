@@ -1,5 +1,7 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
+import { listarSolicitudes } from '@/lib/solicitudes/dal'
+import type { SolicitudConRelaciones } from '@/lib/solicitudes/types'
 import {
   TOPES_TRAMO_REEMBOLSO_GENERAL,
   TOPE_ANUAL_POR_GRUPO_FAMILIAR,
@@ -13,6 +15,19 @@ import type {
   TopeReembolsoGeneral,
   AcumuladoDialisisMensual,
 } from './types'
+
+// Nav ("Reembolsos", lib/dashboard/nav.ts) apuntaba a esta ruta marcada
+// `disponible: false` — EPIC 14/25 (crear, aprobar, pagar reembolsos) ya
+// estaban completos vía el flujo genérico de /solicitudes, pero finanzas y
+// administrador no tenían una vista propia para ubicarlos entre el resto de
+// solicitudes (cajas de mercadería, pañales, etc.). Reutiliza
+// `listarSolicitudes` (misma fuente que /solicitudes) filtrando por
+// `tipos_ayuda.tipo === 'reembolso'` — sin query nueva, sin duplicar el
+// cálculo de remanente (que sigue viviendo exclusivamente en este archivo).
+export async function listarSolicitudesReembolso(): Promise<SolicitudConRelaciones[]> {
+  const solicitudes = await listarSolicitudes()
+  return solicitudes.filter((s) => s.tipo_ayuda_tipo === 'reembolso')
+}
 
 type FilaDecisionAprobada = {
   monto_aprobado: number | null

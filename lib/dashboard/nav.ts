@@ -19,7 +19,7 @@ export const NAV_BY_ROL: Record<RolUsuario, NavItem[]> = {
     { label: 'Entregas', href: '/entregas', disponible: true },
     // US-13.05: hogares sin coordenadas — priorizar su regularización.
     { label: 'Hogares sin georreferenciar', href: '/hogares/pendientes-georreferenciar', disponible: true },
-    { label: 'Reembolsos', href: '/reembolsos', disponible: false },
+    { label: 'Reembolsos', href: '/reembolsos', disponible: true },
     { label: 'Auditoría', href: '/auditoria', disponible: true },
     // 🆕 EPIC 26: gestión de incidentes de seguridad (Ley 21.719).
     { label: 'Incidentes de seguridad', href: '/incidentes', disponible: true },
@@ -60,7 +60,7 @@ export const NAV_BY_ROL: Record<RolUsuario, NavItem[]> = {
     // separado todavía, reutiliza el mismo /solicitudes que los demás roles
     // de gestión (RLS ya le permite leer solicitudes y decisiones_solicitud).
     { label: 'Solicitudes', href: '/solicitudes', disponible: true },
-    { label: 'Reembolsos', href: '/reembolsos', disponible: false },
+    { label: 'Reembolsos', href: '/reembolsos', disponible: true },
     // US-17.03/US-17.04: reportes de reembolsos médicos y de diálisis.
     { label: 'Reportes', href: '/reportes', disponible: true },
   ],
