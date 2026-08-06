@@ -7,7 +7,6 @@ import { listarIntegrantes } from '@/lib/personas/dal'
 import { cambiarEstadoIntegrante } from '@/lib/personas/actions'
 import { ESTADO_PERSONA_LABELS, type EstadoPersona } from '@/lib/personas/types'
 import { listarSolicitudesDeHogar } from '@/lib/solicitudes/dal'
-import { ESTADO_SOLICITUD_LABELS } from '@/lib/solicitudes/types'
 import { listarHitosDeHogar, ROLES_VER_HITOS, ROLES_REGISTRAR_HITOS } from '@/lib/hitos/dal'
 import { TIPO_HITO_LABELS, TIPOS_HITO, type TipoHito } from '@/lib/hitos/types'
 import { listarInformesSocialesDeHogar, ROLES_VER_INFORMES, ROLES_REGISTRAR_INFORMES } from '@/lib/informes-sociales/dal'
@@ -20,6 +19,11 @@ import { DocumentoUploadForm } from '../../documento-upload-form'
 import { DocumentosSection } from '../../documentos-section'
 import { RshBadge } from '../rsh-badge'
 import { GeorreferenciacionBadge } from '../georreferenciacion-badge'
+import { Card } from '@/components/ui/Card'
+import { Button, ButtonLink } from '@/components/ui/Button'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
+import { BannerSensible } from '@/components/ui/BannerSensible'
 
 // US-20.02: "terreno no ve historial completo del hogar" — mismo criterio
 // que hogares/page.tsx: bloquea solo a terreno_repartidor, que no tiene
@@ -40,6 +44,12 @@ const ESTADOS_PERSONA: EstadoPersona[] = [
   'fallecido',
   'pendiente_validacion',
 ]
+
+// Umbral de CLAUDE.md ("Elegibilidad RSH: un hogar con tramo RSH > 40% no
+// puede aprobarse por flujo regular"). No hay un flag propio guardado en el
+// hogar para "tiene excepción RSH" — este es el dato real más directo
+// disponible (hogar.tramo_rsh) para esa regla de negocio exacta.
+const UMBRAL_EXCEPCION_RSH = 40
 
 export default async function FichaGrupoFamiliarPage({
   params,
@@ -74,6 +84,10 @@ export default async function FichaGrupoFamiliarPage({
   // (ROLES_VER_HOGAR ya autoriza esta página), así que no hace falta un
   // gate de rol adicional para esta consulta.
   const ayudasEntregadas = await listarEntregasRealizadasDeHogar(id)
+  const anioActual = new Date().getFullYear()
+  const ayudasEsteAnio = ayudasEntregadas.filter(
+    (e) => e.fecha_hora_entrega && new Date(e.fecha_hora_entrega).getFullYear() === anioActual
+  ).length
 
   // US-22.03: la sección de hitos es dato sensible — se filtra la
   // renderización según rol, igual que el historial de cambios críticos.
@@ -106,102 +120,120 @@ export default async function FichaGrupoFamiliarPage({
 
   const cambiarEstadoHogarConId = cambiarEstadoGrupoFamiliar.bind(null, hogar.id)
 
+  // Prompt 2 (Paso 2): "si el hogar tiene excepción RSH" — el dato real más
+  // directo disponible es el propio tramo_rsh del hogar contra el umbral de
+  // CLAUDE.md (ver constante de arriba), no un flag guardado.
+  const tieneExcepcionRsh = hogar.tramo_rsh !== null && hogar.tramo_rsh > UMBRAL_EXCEPCION_RSH
+
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 rounded-xl bg-brand-800 p-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{hogar.direccion}</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {hogar.sector} · estado {hogar.estado}
+          <h1 className="text-2xl font-semibold text-white">{hogar.direccion}</h1>
+          <p className="mt-1 flex items-center gap-2 text-sm text-brand-100">
+            <span>{hogar.sector}</span>
+            <EstadoBadge estado={hogar.estado} />
           </p>
         </div>
         <div className="flex items-center gap-2">
           {puedeEditar && (
             <form action={cambiarEstadoHogarConId}>
               <input type="hidden" name="estado" value={hogar.estado === 'activo' ? 'inactivo' : 'activo'} />
-              <button
-                type="submit"
-                className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-              >
+              <Button type="submit" variante="inverse">
                 {hogar.estado === 'activo' ? 'Marcar como inactivo' : 'Reactivar hogar'}
-              </button>
+              </Button>
             </form>
           )}
           {puedeEditar && (
-            <Link
-              href={`/hogares/${hogar.id}/editar`}
-              className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-            >
+            <ButtonLink href={`/hogares/${hogar.id}/editar`} variante="inverse">
               Editar
-            </Link>
+            </ButtonLink>
           )}
         </div>
       </div>
 
+      {tieneExcepcionRsh && (
+        <CardExcepcion>
+          <div className="flex items-start gap-3">
+            <BadgeExcepcion texto="Excepción RSH" />
+            <p>
+              Este hogar tiene tramo RSH {hogar.tramo_rsh}%, sobre el {UMBRAL_EXCEPCION_RSH}% —
+              no puede aprobarse por flujo regular (CLAUDE.md). Cualquier ayuda requiere excepción
+              explícita con informe social asociado.
+            </p>
+          </div>
+        </CardExcepcion>
+      )}
+
       {hogar.estado === 'inactivo' && (
-        <p className="rounded border border-amber-600/30 bg-amber-600/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-500">
+        <p className="rounded-lg bg-warning-bg px-4 py-2 text-sm text-warning-fg">
           Este hogar está marcado como inactivo. No se pueden crear nuevas
           solicitudes hasta reactivarlo.
         </p>
       )}
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Teléfono</h2>
-          <p>{hogar.telefono ?? '—'}</p>
-        </div>
-        <div>
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Tramo RSH</h2>
-          <p className="flex items-center gap-2">
-            <span>{hogar.tramo_rsh !== null ? `${hogar.tramo_rsh}%` : 'Sin registrar'}</span>
-            <RshBadge
-              tramoRsh={hogar.tramo_rsh}
-              fechaActualizacionRsh={hogar.fecha_actualizacion_rsh}
-            />
-          </p>
-        </div>
-        <div>
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-            Fecha actualización RSH
-          </h2>
-          <p>{hogar.fecha_actualizacion_rsh ?? '—'}</p>
-        </div>
-        <div>
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Coordenadas</h2>
-          <p className="flex items-center gap-2">
-            <span>
-              {hogar.latitud !== null && hogar.longitud !== null
-                ? `${hogar.latitud}, ${hogar.longitud}`
-                : 'Sin registrar'}
+      <section className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <p className="text-3xl font-semibold text-brand-800">{integrantes.length}</p>
+          <p className="text-sm text-text-muted">Integrantes</p>
+        </Card>
+        <Card>
+          <p className="flex items-baseline gap-2">
+            <span className="text-3xl font-semibold text-brand-600">
+              {hogar.tramo_rsh !== null ? `${hogar.tramo_rsh}%` : '—'}
             </span>
-            <GeorreferenciacionBadge latitud={hogar.latitud} longitud={hogar.longitud} />
+            <RshBadge tramoRsh={hogar.tramo_rsh} fechaActualizacionRsh={hogar.fecha_actualizacion_rsh} />
           </p>
-        </div>
-        <div>
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Observaciones</h2>
-          <p className="whitespace-pre-wrap">{hogar.observaciones ?? '—'}</p>
-        </div>
+          <p className="text-sm text-text-muted">Tramo RSH</p>
+        </Card>
+        <Card>
+          <p className="text-3xl font-semibold text-brand-800">{ayudasEsteAnio}</p>
+          <p className="text-sm text-text-muted">Ayudas entregadas este año</p>
+        </Card>
       </section>
+
+      <Card header={<h2 className="font-medium text-text-primary">Datos del hogar</h2>}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <h3 className="text-sm font-medium text-text-muted">Teléfono</h3>
+            <p className="text-text-primary">{hogar.telefono ?? '—'}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-text-muted">Fecha actualización RSH</h3>
+            <p className="text-text-primary">{hogar.fecha_actualizacion_rsh ?? '—'}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-text-muted">Coordenadas</h3>
+            <p className="flex items-center gap-2 text-text-primary">
+              <span>
+                {hogar.latitud !== null && hogar.longitud !== null
+                  ? `${hogar.latitud}, ${hogar.longitud}`
+                  : 'Sin registrar'}
+              </span>
+              <GeorreferenciacionBadge latitud={hogar.latitud} longitud={hogar.longitud} />
+            </p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-text-muted">Observaciones</h3>
+            <p className="whitespace-pre-wrap text-text-primary">{hogar.observaciones ?? '—'}</p>
+          </div>
+        </div>
+      </Card>
 
       <section>
         <div className="flex items-center justify-between">
-          <h2 className="font-medium">Integrantes</h2>
+          <h2 className="font-medium text-text-primary">Integrantes</h2>
           {puedeEditar && (
-            <Link
-              href={`/hogares/${hogar.id}/integrantes/nuevo`}
-              className="rounded border border-black/10 px-3 py-1.5 text-sm font-medium dark:border-white/20"
-            >
+            <ButtonLink href={`/hogares/${hogar.id}/integrantes/nuevo`} variante="secondary">
               Agregar integrante
-            </Link>
+            </ButtonLink>
           )}
         </div>
 
         {integrantes.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            Sin integrantes registrados todavía.
-          </p>
+          <p className="mt-2 text-sm text-text-muted">Sin integrantes registrados todavía.</p>
         ) : (
-          <ul className="mt-2 divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+          <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
             {integrantes.map((persona) => {
               const cambiarEstadoPersonaConIds = cambiarEstadoIntegrante.bind(
                 null,
@@ -212,10 +244,10 @@ export default async function FichaGrupoFamiliarPage({
               return (
                 <li key={persona.id} className="flex items-center justify-between px-4 py-3">
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium text-text-primary">
                       {persona.nombres} {persona.apellidos}
                     </p>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    <p className="text-sm text-text-muted">
                       {persona.rut} · {persona.parentesco}
                     </p>
                   </div>
@@ -225,7 +257,7 @@ export default async function FichaGrupoFamiliarPage({
                         <select
                           name="estado"
                           defaultValue={persona.estado}
-                          className="rounded border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/20"
+                          className="rounded-lg border border-border bg-transparent px-2 py-1 text-xs text-text-primary"
                         >
                           {ESTADOS_PERSONA.map((estado) => (
                             <option key={estado} value={estado}>
@@ -233,22 +265,17 @@ export default async function FichaGrupoFamiliarPage({
                             </option>
                           ))}
                         </select>
-                        <button
-                          type="submit"
-                          className="rounded border border-black/10 px-2 py-1 text-xs font-medium dark:border-white/20"
-                        >
+                        <Button type="submit" variante="secondary" className="px-2 py-1 text-xs">
                           Aplicar
-                        </button>
+                        </Button>
                       </form>
                     ) : (
-                      <span className="text-xs uppercase text-zinc-500 dark:text-zinc-400">
-                        {ESTADO_PERSONA_LABELS[persona.estado]}
-                      </span>
+                      <EstadoBadge estado={persona.estado} />
                     )}
                     {puedeEditar && (
                       <Link
                         href={`/hogares/${hogar.id}/integrantes/${persona.id}/editar`}
-                        className="rounded border border-black/10 px-2 py-1 text-xs font-medium dark:border-white/20"
+                        className="rounded-lg border border-border px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-alt"
                       >
                         Editar
                       </Link>
@@ -263,40 +290,31 @@ export default async function FichaGrupoFamiliarPage({
 
       <section>
         <div className="flex items-center justify-between">
-          <h2 className="font-medium">Solicitudes asociadas</h2>
+          <h2 className="font-medium text-text-primary">Solicitudes asociadas</h2>
           {puedeEditar && hogar.estado === 'activo' && (
-            <Link
-              href={`/hogares/${hogar.id}/solicitudes/nueva`}
-              className="rounded border border-black/10 px-3 py-1.5 text-sm font-medium dark:border-white/20"
-            >
+            <ButtonLink href={`/hogares/${hogar.id}/solicitudes/nueva`} variante="secondary">
               Nueva solicitud
-            </Link>
+            </ButtonLink>
           )}
         </div>
 
         {solicitudes.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            Sin solicitudes registradas todavía.
-          </p>
+          <p className="mt-2 text-sm text-text-muted">Sin solicitudes registradas todavía.</p>
         ) : (
-          <ul className="mt-2 divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+          <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
             {solicitudes.map((solicitud) => (
               <li key={solicitud.id}>
                 <Link
                   href={`/solicitudes/${solicitud.id}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-black/5 dark:hover:bg-white/10"
+                  className="flex items-center justify-between px-4 py-3 hover:bg-surface-alt"
                 >
                   <span>
-                    <span className="font-medium">{solicitud.tipo_ayuda_nombre}</span>
+                    <span className="font-medium text-text-primary">{solicitud.tipo_ayuda_nombre}</span>
                     {solicitud.persona_nombre && (
-                      <span className="ml-2 text-sm text-zinc-500 dark:text-zinc-400">
-                        {solicitud.persona_nombre}
-                      </span>
+                      <span className="ml-2 text-sm text-text-muted">{solicitud.persona_nombre}</span>
                     )}
                   </span>
-                  <span className="text-xs uppercase text-zinc-500 dark:text-zinc-400">
-                    {ESTADO_SOLICITUD_LABELS[solicitud.estado]}
-                  </span>
+                  <EstadoBadge estado={solicitud.estado} />
                 </Link>
               </li>
             ))}
@@ -305,32 +323,33 @@ export default async function FichaGrupoFamiliarPage({
       </section>
 
       {puedeVerHitos && (
-        <section>
+        <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-medium">Hitos</h2>
+            <h2 className="font-medium text-text-primary">Hitos</h2>
             {puedeRegistrarHitos && (
-              <Link
-                href={`/hogares/${hogar.id}/hitos/nuevo`}
-                className="rounded border border-black/10 px-3 py-1.5 text-sm font-medium dark:border-white/20"
-              >
+              <ButtonLink href={`/hogares/${hogar.id}/hitos/nuevo`} variante="secondary">
                 Registrar hito
-              </Link>
+              </ButtonLink>
             )}
           </div>
+
+          <BannerSensible>
+            Información sensible — visible solo para evaluador social, aprobador y administrador.
+          </BannerSensible>
 
           {/* US-22.02: "se puede filtrar por tipo de hito" — mismo patrón
               sin JS que el filtro de documentos (?tipo_hito=...). Preserva
               tipo_documento si estaba activo, para no borrarlo al filtrar. */}
-          <form className="mt-2 flex items-center gap-2 text-sm">
+          <form className="flex items-center gap-2 text-sm">
             {tipoFiltro && <input type="hidden" name="tipo_documento" value={tipoFiltro} />}
-            <label htmlFor="tipo_hito_filtro" className="text-zinc-500 dark:text-zinc-400">
+            <label htmlFor="tipo_hito_filtro" className="text-text-muted">
               Filtrar por tipo
             </label>
             <select
               id="tipo_hito_filtro"
               name="tipo_hito"
               defaultValue={tipoHitoFiltro ?? ''}
-              className="rounded border border-black/10 bg-transparent px-2 py-1 dark:border-white/20"
+              className="rounded-lg border border-border bg-transparent px-2 py-1 text-text-primary"
             >
               <option value="">Todos</option>
               {TIPOS_HITO.map((tipo) => (
@@ -339,36 +358,34 @@ export default async function FichaGrupoFamiliarPage({
                 </option>
               ))}
             </select>
-            <button type="submit" className="rounded border border-black/10 px-2 py-1 dark:border-white/20">
+            <Button type="submit" variante="secondary" className="px-2 py-1">
               Filtrar
-            </button>
+            </Button>
             {tipoHitoFiltro && (
-              <a href={`/hogares/${hogar.id}`} className="text-zinc-500 underline dark:text-zinc-400">
+              <a href={`/hogares/${hogar.id}`} className="text-brand-600 underline">
                 Ver todos
               </a>
             )}
           </form>
 
           {hitos.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-text-muted">
               {tipoHitoFiltro ? 'Sin hitos de este tipo.' : 'Sin hitos registrados todavía.'}
             </p>
           ) : (
-            <ul className="mt-2 divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+            <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
               {hitos.map((hito) => (
                 <li key={hito.id} className="px-4 py-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{TIPO_HITO_LABELS[hito.tipo]}</span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {hito.fecha_hito}
-                    </span>
+                    <span className="font-medium text-text-primary">{TIPO_HITO_LABELS[hito.tipo]}</span>
+                    <span className="text-xs text-text-muted">{hito.fecha_hito}</span>
                   </div>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  <p className="text-sm text-text-muted">
                     {hito.categoria}
                     {hito.persona_nombre && ` · ${hito.persona_nombre}`}
                   </p>
-                  <p className="mt-1 text-sm whitespace-pre-wrap">{hito.comentario}</p>
-                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="mt-1 text-sm whitespace-pre-wrap text-text-primary">{hito.comentario}</p>
+                  <p className="mt-1 text-xs text-text-muted">
                     Registrado por {hito.creado_por_nombre ?? 'usuario desconocido'}
                   </p>
                 </li>
@@ -379,47 +396,47 @@ export default async function FichaGrupoFamiliarPage({
       )}
 
       {puedeVerInformes && (
-        <section>
+        <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-medium">Informes sociales</h2>
+            <h2 className="font-medium text-text-primary">Informes sociales</h2>
             {puedeRegistrarInformes && (
-              <Link
-                href={`/hogares/${hogar.id}/informes-sociales/nuevo`}
-                className="rounded border border-black/10 px-3 py-1.5 text-sm font-medium dark:border-white/20"
-              >
+              <ButtonLink href={`/hogares/${hogar.id}/informes-sociales/nuevo`} variante="secondary">
                 Registrar informe
-              </Link>
+              </ButtonLink>
             )}
           </div>
 
+          <BannerSensible>
+            Información sensible — el acceso a cada informe respeta además su nivel de
+            confidencialidad.
+          </BannerSensible>
+
           {informesSociales.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              Sin informes sociales registrados todavía.
-            </p>
+            <p className="text-sm text-text-muted">Sin informes sociales registrados todavía.</p>
           ) : (
-            <ul className="mt-2 divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+            <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
               {informesSociales.map((informe) => (
                 <li key={informe.id} className="space-y-1 px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{informe.motivo}</span>
-                    <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">{informe.fecha_informe}</span>
+                    <span className="font-medium text-text-primary">{informe.motivo}</span>
+                    <span className="shrink-0 text-xs text-text-muted">{informe.fecha_informe}</span>
                   </div>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  <p className="text-sm text-text-muted">
                     {informe.persona_nombre && `${informe.persona_nombre} · `}
                     {informe.solicitud_id ? (
-                      <Link href={`/solicitudes/${informe.solicitud_id}`} className="underline">
+                      <Link href={`/solicitudes/${informe.solicitud_id}`} className="text-brand-600 underline">
                         {informe.solicitud_tipo_ayuda_nombre ?? 'Ver solicitud asociada'}
                       </Link>
                     ) : (
                       'Sin solicitud asociada'
                     )}
                     {' · '}
-                    <span className="rounded-full border border-black/10 px-2 py-0.5 text-xs dark:border-white/20">
+                    <span className="rounded-full border border-border px-2 py-0.5 text-xs">
                       {NIVEL_CONFIDENCIALIDAD_LABELS[informe.nivel_confidencialidad]}
                     </span>
                   </p>
-                  <p className="mt-1 text-sm whitespace-pre-wrap">{informe.recomendacion_profesional}</p>
-                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  <p className="mt-1 text-sm whitespace-pre-wrap text-text-primary">{informe.recomendacion_profesional}</p>
+                  <p className="mt-1 text-xs text-text-muted">
                     Registrado por {informe.creado_por_nombre ?? 'usuario desconocido'}
                   </p>
                 </li>
@@ -430,7 +447,7 @@ export default async function FichaGrupoFamiliarPage({
       )}
 
       <section className="space-y-3">
-        <h2 className="font-medium">Documentos</h2>
+        <h2 className="font-medium text-text-primary">Documentos</h2>
         {puedeEditar && <DocumentoUploadForm action={subirDocumentoConId} />}
         <DocumentosSection
           documentos={documentos}
@@ -444,32 +461,28 @@ export default async function FichaGrupoFamiliarPage({
       </section>
 
       <section>
-        <h2 className="font-medium">Ayudas entregadas</h2>
+        <h2 className="font-medium text-text-primary">Ayudas entregadas</h2>
         {ayudasEntregadas.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            Sin ayudas entregadas todavía.
-          </p>
+          <p className="mt-2 text-sm text-text-muted">Sin ayudas entregadas todavía.</p>
         ) : (
-          <ul className="mt-2 divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+          <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
             {ayudasEntregadas.map((entrega) => (
               <li key={entrega.entrega_id}>
                 <Link
                   href={entrega.ruta}
-                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-black/5 dark:hover:bg-white/10"
+                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-alt"
                 >
                   <span>
-                    <span className="font-medium">{entrega.tipo_ayuda_nombre}</span>
+                    <span className="font-medium text-text-primary">{entrega.tipo_ayuda_nombre}</span>
                     {entrega.persona_nombre && (
-                      <span className="ml-2 text-sm text-zinc-500 dark:text-zinc-400">
-                        {entrega.persona_nombre}
-                      </span>
+                      <span className="ml-2 text-sm text-text-muted">{entrega.persona_nombre}</span>
                     )}
-                    <span className="mt-1 block text-sm text-zinc-500 dark:text-zinc-400">
+                    <span className="mt-1 block text-sm text-text-muted">
                       Recibió: {entrega.receptor_nombre ?? '—'}
                       {entrega.receptor_relacion && ` (${entrega.receptor_relacion})`}
                     </span>
                   </span>
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="text-xs text-text-muted">
                     {entrega.fecha_hora_entrega
                       ? new Date(entrega.fecha_hora_entrega).toLocaleString('es-CL')
                       : '—'}
@@ -483,15 +496,13 @@ export default async function FichaGrupoFamiliarPage({
 
       {puedeVerHistorial && (
         <section>
-          <h2 className="font-medium">Historial de cambios críticos del hogar</h2>
+          <h2 className="font-medium text-text-primary">Historial de cambios críticos del hogar</h2>
           {historial.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              Sin cambios registrados todavía.
-            </p>
+            <p className="mt-2 text-sm text-text-muted">Sin cambios registrados todavía.</p>
           ) : (
             <ul className="mt-2 space-y-2 text-sm">
               {historial.map((cambio) => (
-                <li key={cambio.id} className="text-zinc-600 dark:text-zinc-400">
+                <li key={cambio.id} className="text-text-muted">
                   {new Date(cambio.creado_en).toLocaleString('es-CL')} · {cambio.campo}:{' '}
                   {cambio.valor_anterior ?? '—'} → {cambio.valor_nuevo ?? '—'}
                 </li>

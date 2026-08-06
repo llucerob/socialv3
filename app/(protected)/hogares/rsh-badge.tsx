@@ -19,7 +19,7 @@ export function RshBadge({
       : `RSH desactualizado (hace ${estado.meses} meses)`
 
   return (
-    <span className="rounded-full border border-amber-600/30 bg-amber-600/10 px-2 py-0.5 text-xs whitespace-nowrap text-amber-700 dark:text-amber-500">
+    <span className="rounded-full bg-warning-bg px-2 py-0.5 text-xs whitespace-nowrap text-warning-fg">
       {texto}
     </span>
   )

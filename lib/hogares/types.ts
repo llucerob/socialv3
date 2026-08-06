@@ -1,5 +1,10 @@
 export type EstadoGrupoFamiliar = 'activo' | 'inactivo'
 
+export const ESTADO_GRUPO_FAMILIAR_LABELS: Record<EstadoGrupoFamiliar, string> = {
+  activo: 'Activo',
+  inactivo: 'Inactivo',
+}
+
 export type GrupoFamiliar = {
   id: string
   direccion: string
