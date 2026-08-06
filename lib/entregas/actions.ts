@@ -8,6 +8,7 @@ import { obtenerTipoAyuda } from '@/lib/ayudas/dal'
 import { subirDocumentoSolicitud } from '@/lib/documentos/actions'
 import { listarDocumentosDeSolicitud } from '@/lib/documentos/dal'
 import { obtenerMotivoEntregaFallida } from '@/lib/motivos-entrega/dal'
+import { obtenerEntregaAsignadaAlUsuario } from '@/lib/entregas/registro'
 
 // US-12.01/US-12.02: "como bodega o logística" crea y asigna entregas.
 const ROLES_LOGISTICA = ['administrador', 'bodega_logistica'] as const
@@ -190,19 +191,6 @@ export type RealizadaFormState =
   | { error?: string; valores: ValoresRealizadaFormulario }
   | undefined
 
-async function obtenerEntregaAsignadaAlUsuario(entregaId: string, usuarioId: string, esAdmin: boolean) {
-  const supabase = await createClient()
-  const { data: entrega, error } = await supabase
-    .from('entregas')
-    .select('id, estado, solicitud_id, responsable_id')
-    .eq('id', entregaId)
-    .maybeSingle()
-
-  if (error || !entrega) return null
-  if (!esAdmin && entrega.responsable_id !== usuarioId) return null
-  return entrega
-}
-
 // US-12.04: "es obligatorio registrar receptor" · "es obligatorio adjuntar
 // evidencia si la ayuda lo requiere" (tipos_ayuda.requiere_evidencia,
 // US-06.02) · "la solicitud asociada cambia a entregada o cerrada según
@@ -267,6 +255,12 @@ export async function registrarEntregaRealizada(
     .update({
       estado: 'realizada',
       fecha_hora_entrega: valores.fecha_hora ? new Date(valores.fecha_hora).toISOString() : new Date().toISOString(),
+      // EPIC 27 (US-27.05): `capturado_en` es el momento real del registro,
+      // independiente de `fecha_hora_entrega` (que el usuario puede editar
+      // libremente) — lo usa la ruta de sincronización offline para decidir
+      // conflictos ("última escritura por captura gana"). El camino online
+      // siempre captura en el instante del submit.
+      capturado_en: new Date().toISOString(),
       receptor_nombre: valores.receptor_nombre,
       receptor_relacion: valores.receptor_relacion || null,
       observacion_entrega: valores.observacion || null,
@@ -333,6 +327,7 @@ export async function registrarEntregaFallida(
       estado: 'fallida',
       motivo_fallo: valores.motivo_fallo,
       observacion_fallo: valores.observacion || null,
+      capturado_en: new Date().toISOString(),
     })
     .eq('id', entregaId)
 

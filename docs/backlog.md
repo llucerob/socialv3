@@ -196,14 +196,15 @@ para cumplir con la ventana de operación definida en el proyecto (febrero a nov
 
 > **Alcance explícitamente acotado (decisión de diseño):** esta versión **no** contempla descarga de rutas para trabajar varios días sin conexión, ni sincronización diferida de días completos. El objetivo es tolerar cortes de señal típicos de sectores rurales dispersos **dentro de una misma jornada de reparto**, no reemplazar la necesidad de conectividad estructural.
 
-### 🆕 US-27.01 — Instalar la aplicación como PWA
+### 🆕 US-27.01 ✅ — Instalar la aplicación como PWA
 Como funcionario en terreno,
 quiero poder instalar la aplicación en la pantalla de inicio de mi teléfono,
 para acceder rápido sin depender de abrir el navegador y buscar la URL.
 **Prioridad:** P1 · **Dependencias:** US-20.01.
 **Criterios de aceptación:** existe manifest de aplicación web con ícono y nombre · el navegador ofrece "agregar a pantalla de inicio" · la app instalada abre en modo standalone (sin barra de navegador).
+**Estado:** `app/manifest.ts` (nombre, `start_url`, `display: 'standalone'`, íconos 192/512 vía `app/icon.tsx` y `app/icon-512/route.tsx`) + service worker generado por `next-pwa` en el build de producción (`npm run build` → `public/sw.js`, `public/workbox-*.js`). Verificado que `next build --webpack` genera el manifest y el service worker correctamente y que `tsc`/`lint` pasan limpios. **No verificado:** el prompt real de "agregar a pantalla de inicio" en un navegador/dispositivo real — requiere servir en producción (`next start`) sobre HTTPS o localhost y no se ejecutó en esta sesión.
 
-### 🆕 US-27.02 — Cachear la ruta asignada del día para uso offline
+### 🆕 US-27.02 ✅ — Cachear la ruta asignada del día para uso offline
 Como funcionario en terreno,
 quiero que la ruta asignada quede disponible en mi teléfono aunque pierda señal después de cargarla,
 para poder seguir viendo mis entregas pendientes sin depender de conexión constante.
@@ -212,8 +213,9 @@ para poder seguir viendo mis entregas pendientes sin depender de conexión const
 - Al abrir la ruta del día con conexión activa, sus datos (listado de entregas, direcciones, datos mínimos del beneficiario, orden sugerido) quedan guardados localmente en el dispositivo.
 - Si se pierde la conexión después de esa carga inicial, el funcionario sigue viendo la ruta completa sin errores.
 - La ruta cacheada se limita a la jornada/día en curso (no rutas futuras ni de días anteriores).
+**Estado:** `/mis-entregas` (única vista de terreno con entregas asignadas al usuario, ver alcance más abajo) persiste su listado en IndexedDB (`lib/offline/db.ts`, store `ruta`) apenas se carga con conexión. `guardarRutaDelDia` filtra a entregas de hoy o sin `fecha_programada`. Verificado en navegador: cargada la ruta con conexión, se recargó la página simulando falta de señal y el listado completo (incluyendo datos de contacto/dirección) se siguió mostrando sin errores, leído directo desde IndexedDB. **Nota de alcance:** `/rutas` (vista de mapa/ruteo geográfico de US-13.04) queda explícitamente fuera de este cacheo — es una vista de planificación de escritorio, no la pantalla de ejecución en terreno; solo `/mis-entregas` (y su fallback `/offline`) están cubiertas.
 
-### 🆕 US-27.03 — Registrar entrega (realizada o fallida) sin conexión
+### 🆕 US-27.03 ✅ — Registrar entrega (realizada o fallida) sin conexión
 Como funcionario en terreno,
 quiero poder marcar una entrega como realizada o fallida aunque no tenga señal en ese momento,
 para no detener mi trabajo esperando conectividad.
@@ -222,15 +224,17 @@ para no detener mi trabajo esperando conectividad.
 - El registro de entrega (US-12.04) y de entrega fallida (US-12.05) funciona igual con o sin conexión.
 - Si no hay conexión al momento de guardar, el registro queda almacenado localmente y marcado como "pendiente de sincronizar".
 - El funcionario puede seguir avanzando a la siguiente entrega de la ruta sin que el estado offline lo bloquee.
+**Estado:** los formularios existentes `EntregaRealizadaForm`/`EntregaFallidaForm` (EPIC 12) se reutilizaron sin modificar su UI, pasándoles una función cliente (`lib/offline/sync.ts` → `enviarOEncolar`) en vez de la Server Action original — intenta `fetch` directo y, si falla por red, encola en IndexedDB (`cola_sync`) y aplica de inmediato la actualización optimista local con badge "Pendiente de sincronizar". Se agregaron rutas API paralelas (`app/api/mis-entregas/[id]/realizada` y `/fallida`) porque las Server Actions originales no son reproducibles desde una cola offline. Verificado en navegador: con `fetch` bloqueado, se registró una entrega fallida — quedó marcada "pendiente de sincronizar" en la lista y el funcionario pudo navegar a la siguiente entrega sin bloqueo.
 
-### 🆕 US-27.04 — Capturar evidencia sin conexión
+### 🆕 US-27.04 ✅ — Capturar evidencia sin conexión
 Como funcionario en terreno,
 quiero poder tomar la fotografía y registrar los datos del receptor aunque no tenga señal,
 para respaldar la entrega igual que si estuviera conectado.
 **Prioridad:** P0 · **Dependencias:** US-12.06, 🆕 US-27.03.
 **Criterios de aceptación:** la fotografía y los demás datos de evidencia (US-12.06) se guardan localmente si no hay conexión · quedan vinculados al registro de entrega pendiente de sincronizar (US-27.03) · no se pierde evidencia capturada aunque la app se cierre o el teléfono se apague antes de sincronizar.
+**Estado:** la fotografía se guarda como `Blob` dentro del propio item de `cola_sync` en IndexedDB (no en memoria), junto a los datos del receptor. Verificado con una prueba realista: se registró una entrega realizada con foto sin conexión, y en vez de solo mockear `fetch` en memoria, se recargó la página completa (navegación real, más cercano a "cerrar la app") — el ítem con la foto sobrevivió el reload en IndexedDB y, al recuperar `fetch`, se sincronizó automáticamente y la foto quedó subida a Supabase Storage y enlazada en `documentos`.
 
-### 🆕 US-27.05 — Sincronizar automáticamente al recuperar conexión
+### 🆕 US-27.05 ✅ — Sincronizar automáticamente al recuperar conexión
 Como sistema,
 quiero enviar automáticamente los cambios guardados localmente apenas el dispositivo detecte conexión,
 para que el funcionario no tenga que hacer una acción manual de sincronización.
@@ -239,15 +243,18 @@ para que el funcionario no tenga que hacer una acción manual de sincronización
 - Al recuperar señal, el dispositivo envía automáticamente todos los registros y evidencias pendientes, sin que el funcionario deba presionar un botón.
 - Si la sincronización de un elemento falla, se reintenta automáticamente sin perder los datos locales.
 - El sistema central recibe los registros con su fecha y hora original de captura (no la fecha de sincronización), para no distorsionar el historial.
+**Estado:** `lib/offline/sync.ts` — listener de evento `online` + intervalo de respaldo de 20s (no se usa la Background Sync API del navegador por soporte parcial en Safari/iOS, ver comentario en el código; el alcance acotado del EPIC — cortes momentáneos con la app abierta, no sincronización con la app cerrada — no la necesita). Se agregó columna `capturado_en` (migración `20260816000001_offline_entregas_sync.sql`) que graba el momento real de captura, distinto de `updated_at` (momento de escritura en servidor). Verificado contra la base de datos: en dos pruebas (fallida y realizada+evidencia) `capturado_en` quedó entre ~35 segundos y ~2 minutos antes que `updated_at`, confirmando que el servidor preserva la marca de tiempo original y no la de sincronización. Fallos de red incrementan un contador de intentos sin vaciar la cola (reintento automático); errores definitivos del servidor (4xx/5xx que no sean reintentables) sí se marcan como error en vez de reintentar indefinidamente.
+**Bug encontrado y corregido durante la verificación:** `procesarItem` (motor de sincronización en segundo plano) solo actualizaba `estado_local: 'sincronizada'` al confirmar éxito, pero no los campos reales (`estado`, `receptor_nombre`, `motivo_fallo`, etc.) del registro cacheado. Esto no se notaba cuando el envío ocurría en el camino rápido (`enviarOEncolar`, con el formulario todavía montado, que sí actualiza esos campos), pero si el envío quedaba pendiente y lo terminaba el motor en segundo plano (p. ej. tras recargar la página antes de que hubiera señal), la entrega seguía viéndose como "pendiente" en el caché local aunque el servidor ya tuviera el resultado final — reabriendo el formulario de una entrega ya resuelta. Corregido agregando `derivarActualizacionLocal()`, que reconstruye los campos finales desde el propio ítem de la cola antes de marcarlo sincronizado. Verificado tras el fix: se sembró un ítem de cola directamente en IndexedDB, se recargó la página y, en menos de 3 segundos, el motor real (ya con el fix) procesó el ítem — el caché local quedó en `estado: 'fallida'`, `motivo_fallo_nombre` resuelto correctamente y la cola vacía.
 
-### 🆕 US-27.06 — Mostrar estado de sincronización
+### 🆕 US-27.06 ✅ — Mostrar estado de sincronización
 Como funcionario en terreno,
 quiero ver claramente si mis registros ya se sincronizaron o siguen pendientes,
 para confiar en que mi trabajo quedó respaldado.
 **Prioridad:** P1 · **Dependencias:** 🆕 US-27.05.
 **Criterios de aceptación:** indicador visual simple (ícono o color) con al menos tres estados: sincronizado, pendiente, error de sincronización · el indicador se actualiza en tiempo real conforme se sincronizan los elementos.
+**Estado:** `app/(protected)/mis-entregas/sync-indicator.tsx`, suscrito al pub/sub de `lib/offline/sync.ts`. Tres estados con los colores ya usados en el resto del proyecto (verde/ámbar/rojo): sincronizado, "Pendiente de sincronizar (N)", "Error de sincronización (N)". Verificado en navegador que el indicador cambia de estado sin recargar la página al encolar y al sincronizar un registro.
 
-### 🆕 US-27.07 — Resolver conflictos de sincronización de forma simple
+### 🆕 US-27.07 ✅ — Resolver conflictos de sincronización de forma simple
 Como sistema,
 quiero aplicar una regla simple cuando dos registros del mismo elemento entren en conflicto,
 para no bloquear la operación ni perder información silenciosamente.
@@ -256,6 +263,9 @@ para no bloquear la operación ni perder información silenciosamente.
 - Política de resolución: la escritura con fecha/hora de captura más reciente prevalece ("última escritura gana").
 - Todo conflicto detectado queda registrado en auditoría, indicando qué versión se descartó, para revisión manual posterior si es necesario.
 - La resolución de conflictos no requiere intervención del funcionario en terreno en el momento.
+**Estado:** `lib/entregas/registro.ts` → `aplicarResultadoEntregaSync`: si la entrega sigue `pendiente` en el servidor, aplica directo; si ya fue resuelta (p. ej. por otro dispositivo o por un envío duplicado), compara `capturado_en` contra `coalesce(entrega.capturado_en, entrega.updated_at)` — la captura más nueva gana. La función `security definer` `registrar_conflicto_sync_entrega` (misma migración que US-27.05) inserta en `entregas_historial` en ambos casos: `sync_conflicto_resuelto` (se sobrescribió, documentando el valor anterior) o `sync_conflicto_descartado` (se descartó el envío entrante, documentando qué se descartó). Ningún conflicto pasa en silencio. Verificado con 3 llamadas API secuenciales sobre la misma entrega con distintos `capturado_en`: (1) aplicación normal en `pendiente`, (2) un envío con `capturado_en` más antiguo devolvió 409 y quedó descartado con su fila de auditoría `sync_conflicto_descartado`, (3) un envío con `capturado_en` más nuevo sobrescribió y quedó su fila `sync_conflicto_resuelto`. Ninguno de los tres requirió intervención del funcionario.
+
+**Nota general de EPIC 27:** decisión de arquitectura clave — App Router necesita red para navegar entre Server Components, así que el maestro-detalle de `/mis-entregas` se resolvió con estado de React dentro de una sola página (no `<Link>`/routing de Next.js) para que funcione sin conexión; `/mis-entregas/[id]` (ruta antigua, online-only) se dejó intacta como acceso directo de conveniencia desde el dashboard. `app/offline/page.tsx`, fuera de `(protected)`, reutiliza el mismo componente como fallback del service worker (`fallbacks.document`) cuando una navegación falla por falta de red. **No verificado en esta sesión:** el prompt de instalación real de PWA en un navegador/dispositivo (US-27.01) y el fallback `/offline` servido específicamente por el service worker en modo producción (`next start`, dado que `next-pwa` está deshabilitado en `next dev`) — ambos quedan pendientes de una verificación productiva posterior.
 
 ---
 

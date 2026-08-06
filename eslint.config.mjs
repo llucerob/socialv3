@@ -15,6 +15,11 @@ const eslintConfig = defineConfig([
     // Generado por `supabase start` (edge runtime bundle), no es código fuente.
     "supabase/.temp/**",
     "supabase/.branches/**",
+    // EPIC 27 — service worker generado por next-pwa en cada build
+    // (`npm run build`), no es código fuente.
+    "public/sw.js",
+    "public/workbox-*.js",
+    "public/fallback-*.js",
   ]),
 ]);
 

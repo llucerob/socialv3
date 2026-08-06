@@ -16,7 +16,7 @@ type FilaConContexto = Omit<Entrega, 'motivo_fallo_nombre'> & {
     tipo_ayuda_id: string
     grupo_familiar_id: string
     grupos_familiares: { direccion: string; sector: string; latitud: number | null; longitud: number | null } | null
-    tipos_ayuda: { nombre: string } | null
+    tipos_ayuda: { nombre: string; requiere_evidencia: boolean } | null
     personas: { nombres: string; apellidos: string } | null
   } | null
 }
@@ -26,7 +26,7 @@ type FilaConContexto = Omit<Entrega, 'motivo_fallo_nombre'> & {
 // solicitudes → grupos_familiares/tipos_ayuda/personas (dos niveles) — sí es
 // confiable vía PostgREST embebido, así que se resuelve aquí y no en JS.
 const SELECT_CON_CONTEXTO =
-  '*, motivos_entrega_fallida(nombre), solicitudes(tipo_ayuda_id, grupo_familiar_id, grupos_familiares(direccion, sector, latitud, longitud), tipos_ayuda(nombre), personas(nombres, apellidos))'
+  '*, motivos_entrega_fallida(nombre), solicitudes(tipo_ayuda_id, grupo_familiar_id, grupos_familiares(direccion, sector, latitud, longitud), tipos_ayuda(nombre, requiere_evidencia), personas(nombres, apellidos))'
 
 // US-12.02: mostrar a quién quedó asignada la entrega ("la asignación queda
 // registrada" — de nada sirve si bodega no puede ver el resultado). Mismo
@@ -63,6 +63,7 @@ function mapearConContexto(fila: FilaConContexto): Omit<EntregaConContexto, 'res
     grupo_familiar_latitud: solicitudes?.grupos_familiares?.latitud ?? null,
     grupo_familiar_longitud: solicitudes?.grupos_familiares?.longitud ?? null,
     tipo_ayuda_nombre: solicitudes?.tipos_ayuda?.nombre ?? '',
+    tipo_ayuda_requiere_evidencia: solicitudes?.tipos_ayuda?.requiere_evidencia ?? false,
     persona_nombre: solicitudes?.personas
       ? `${solicitudes.personas.nombres} ${solicitudes.personas.apellidos}`
       : null,

@@ -6,19 +6,20 @@ No se ejecutaron estas pruebas en esta sesión — Docker/Supabase no estaba dis
 
 ## Alcance: 6 de 11 historias
 
-Cinco historias de este EPIC dependen de EPICs que todavía no existen en el proyecto y no pueden probarse:
+Cuatro historias de este EPIC dependen de EPICs que todavía no existen en el proyecto y no pueden probarse:
 
 | Historia | Depende de | Motivo del bloqueo |
 |---|---|---|
 | US-21.06 — Excepción RSH | EPIC 23 (informes sociales estructurados) | EPIC 23 no está implementado — no existe forma de "adjuntar informe social estructurado" en la aplicación. |
 | US-21.07 — Reembolso excepcional por cirugía | EPIC 25 | EPIC 25 (reembolsos excepcionales) no está implementado — el flujo no existe. |
 | US-21.08 — Reembolso excepcional por fallecimiento | EPIC 25 | Idem US-21.07. |
-| US-21.09 — Entrega con corte de conexión | EPIC 27 (PWA offline) | EPIC 27 no está implementado — no hay service worker, caché offline ni cola de sincronización (`next-pwa` no está instalado). |
 | US-21.11 — Tramos y remanente compartido general/excepcional | US-25.02 (parte de EPIC 25) | El remanente compartido con reembolsos excepcionales no puede probarse porque el lado "excepcional" no existe todavía; solo la mitad del criterio (reembolso general) es ejecutable hoy. |
 
 Quedan documentadas aquí como bloqueadas, no como "no aplican" — deben volver a evaluarse cuando se implementen esos EPICs.
 
-Las 6 restantes (US-21.01 a US-21.05, US-21.10) tienen todas sus dependencias construidas y se detallan a continuación.
+**Actualización (EPIC 27 implementado):** US-21.09 — Entrega con corte de conexión ya no está bloqueada. EPIC 27 (PWA offline) se implementó en una sesión posterior a la redacción original de este documento (`next-pwa`, IndexedDB, cola de sincronización — ver `docs/backlog.md`) y **sí se ejecutó en vivo** contra Supabase local y navegador real, a diferencia del resto de este documento (que quedó como plan sin ejecutar por falta de Docker en su momento). Ver detalle en la sección dedicada más abajo.
+
+Las 7 restantes (US-21.01 a US-21.05, US-21.09, US-21.10) tienen todas sus dependencias construidas y se detallan a continuación.
 
 ## Precondiciones generales
 
@@ -209,6 +210,6 @@ Tres historias (US-21.01, US-21.02, US-21.04) piden explícitamente que "la soli
 | US-21.06 | No — bloqueada por EPIC 23 | — |
 | US-21.07 | No — bloqueada por EPIC 25 | — |
 | US-21.08 | No — bloqueada por EPIC 25 | — |
-| US-21.09 | No — bloqueada por EPIC 27 | — |
+| US-21.09 | Sí (ejecutada en vivo, ver EPIC 27 en `docs/backlog.md`) | Todos los criterios se cumplen: registro offline (realizada/fallida), evidencia con foto sobreviviendo recarga de página, sincronización automática preservando `capturado_en` original, indicador de estado, resolución de conflictos con auditoría. |
 | US-21.10 | Sí | Todos los criterios se cumplen tal como están escritos. |
 | US-21.11 | No — bloqueada por US-25.02 (EPIC 25) | — |

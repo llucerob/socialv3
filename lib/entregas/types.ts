@@ -32,6 +32,10 @@ export type Entrega = {
   // ajustado manualmente dentro del sector del hogar. Null hasta que el
   // sector de la entrega pase por un cálculo o un ajuste manual.
   orden_ruta: number | null
+  // EPIC 27 (US-27.05/US-27.07): momento real de captura del resultado
+  // (online u offline), distinto de updated_at (momento de escritura en
+  // servidor). Null en filas anteriores a esta historia.
+  capturado_en: string | null
   creado_por: string
   created_at: string
   updated_at: string
@@ -49,6 +53,11 @@ export type EntregaConContexto = Entrega & {
   grupo_familiar_latitud: number | null
   grupo_familiar_longitud: number | null
   tipo_ayuda_nombre: string
+  // EPIC 27 (US-27.04): se embebe en el listado para que el modo offline
+  // sepa si exigir evidencia sin tener que resolver la solicitud/tipo de
+  // ayuda por separado (esa resolución, lib/solicitudes/dal.ts +
+  // lib/ayudas/dal.ts, requiere red).
+  tipo_ayuda_requiere_evidencia: boolean
   persona_nombre: string | null
 }
 
