@@ -1,9 +1,17 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
+import dynamic from 'next/dynamic'
 import type { GrupoFamiliarFormState } from '@/lib/hogares/actions'
 import type { GrupoFamiliar } from '@/lib/hogares/types'
 import type { Sector } from '@/lib/sectores/types'
+
+// US-03.06: Leaflet depende del DOM del navegador (window/document) — no
+// puede renderizarse en el servidor.
+const SelectorCoordenadas = dynamic(
+  () => import('@/components/mapa/SelectorCoordenadas').then((m) => m.SelectorCoordenadas),
+  { ssr: false, loading: () => <div className="h-[320px] w-full rounded border border-black/10 bg-black/5 dark:border-white/20 dark:bg-white/5" /> }
+)
 
 type HogarFormAction = (
   state: GrupoFamiliarFormState,
@@ -28,6 +36,21 @@ export function HogarForm({
   // borraría lo tipeado. Los valores enviados vuelven en el state y tienen
   // prioridad sobre defaultValues.
   const valores = state?.valores
+
+  // US-03.06: controlados (a diferencia del resto del formulario) para que
+  // el mapa y los campos numéricos se mantengan sincronizados en ambas
+  // direcciones — tipear una coordenada mueve el marcador, y marcar/arrastrar
+  // en el mapa actualiza los campos.
+  const [latitud, setLatitud] = useState<string>(() => {
+    const inicial = valores?.latitud ?? defaultValues?.latitud
+    return inicial !== null && inicial !== undefined && !Number.isNaN(inicial) ? String(inicial) : ''
+  })
+  const [longitud, setLongitud] = useState<string>(() => {
+    const inicial = valores?.longitud ?? defaultValues?.longitud
+    return inicial !== null && inicial !== undefined && !Number.isNaN(inicial) ? String(inicial) : ''
+  })
+  const latitudNumerica = latitud === '' ? null : Number(latitud)
+  const longitudNumerica = longitud === '' ? null : Number(longitud)
 
   return (
     <form action={formAction} className="max-w-lg space-y-4">
@@ -119,6 +142,18 @@ export function HogarForm({
         </div>
       </div>
 
+      <div className="space-y-2">
+        <span className="text-sm font-medium">Ubicación en el mapa</span>
+        <SelectorCoordenadas
+          latitud={latitudNumerica}
+          longitud={longitudNumerica}
+          onCambiar={(lat, lng) => {
+            setLatitud(lat.toFixed(7))
+            setLongitud(lng.toFixed(7))
+          }}
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
           <label htmlFor="latitud" className="text-sm font-medium">
@@ -131,11 +166,8 @@ export function HogarForm({
             min={-90}
             max={90}
             step="0.0000001"
-            defaultValue={
-              (Number.isNaN(valores?.latitud) ? '' : valores?.latitud) ??
-              defaultValues?.latitud ??
-              ''
-            }
+            value={latitud}
+            onChange={(e) => setLatitud(e.target.value)}
             className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
           />
         </div>
@@ -150,11 +182,8 @@ export function HogarForm({
             min={-180}
             max={180}
             step="0.0000001"
-            defaultValue={
-              (Number.isNaN(valores?.longitud) ? '' : valores?.longitud) ??
-              defaultValues?.longitud ??
-              ''
-            }
+            value={longitud}
+            onChange={(e) => setLongitud(e.target.value)}
             className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
           />
         </div>
