@@ -3,19 +3,21 @@ import { createClient } from '@/lib/supabase/server'
 import type { Solicitud, SolicitudConRelaciones, HistorialCambioSolicitud } from './types'
 
 type FilaConRelaciones = Solicitud & {
-  grupos_familiares: { direccion: string } | null
+  grupos_familiares: { direccion: string; sector: string; tramo_rsh: number | null } | null
   tipos_ayuda: { nombre: string; tipo: string } | null
   personas: { nombres: string; apellidos: string } | null
 }
 
 const SELECT_CON_RELACIONES =
-  '*, grupos_familiares(direccion), tipos_ayuda(nombre, tipo), personas(nombres, apellidos)'
+  '*, grupos_familiares(direccion, sector, tramo_rsh), tipos_ayuda(nombre, tipo), personas(nombres, apellidos)'
 
 function mapear(fila: FilaConRelaciones): SolicitudConRelaciones {
   const { grupos_familiares, tipos_ayuda, personas, ...solicitud } = fila
   return {
     ...solicitud,
     grupo_familiar_direccion: grupos_familiares?.direccion ?? '',
+    grupo_familiar_sector: grupos_familiares?.sector ?? '',
+    grupo_familiar_tramo_rsh: grupos_familiares?.tramo_rsh ?? null,
     tipo_ayuda_nombre: tipos_ayuda?.nombre ?? '',
     tipo_ayuda_tipo: tipos_ayuda?.tipo ?? '',
     persona_nombre: personas ? `${personas.nombres} ${personas.apellidos}` : null,

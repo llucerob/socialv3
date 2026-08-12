@@ -3,7 +3,9 @@ import { requireRole } from '@/lib/auth/dal'
 import { listarSolicitudes } from '@/lib/solicitudes/dal'
 import { listarTiposAyuda } from '@/lib/ayudas/dal'
 import { ESTADO_SOLICITUD_LABELS, type EstadoSolicitud } from '@/lib/solicitudes/types'
+import { UMBRAL_ELEGIBILIDAD_RSH } from '@/lib/hogares/rsh'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { BadgeExcepcion } from '@/components/ui/ExcepcionRSH'
 import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
 
 // US-20.02: "terreno no ve historial completo del hogar" — el listado
@@ -104,8 +106,20 @@ export default async function SolicitudesPage({
                   <span className="ml-2 text-sm text-text-muted">
                     {solicitud.grupo_familiar_direccion}
                     {solicitud.persona_nombre ? ` · ${solicitud.persona_nombre}` : ''}
+                    {solicitud.grupo_familiar_sector ? ` · ${solicitud.grupo_familiar_sector}` : ''}
                   </span>
-                  <span className="block text-xs text-text-muted">{solicitud.fecha_solicitud}</span>
+                  <span className="mt-0.5 flex items-center gap-2 text-xs text-text-muted">
+                    <span>{solicitud.fecha_solicitud}</span>
+                    {solicitud.grupo_familiar_tramo_rsh !== null && (
+                      <span className="font-medium text-brand-600">
+                        RSH {solicitud.grupo_familiar_tramo_rsh}%
+                      </span>
+                    )}
+                    {solicitud.grupo_familiar_tramo_rsh !== null &&
+                      solicitud.grupo_familiar_tramo_rsh > UMBRAL_ELEGIBILIDAD_RSH && (
+                        <BadgeExcepcion texto="Excepción RSH" />
+                      )}
+                  </span>
                 </span>
                 <EstadoBadge estado={solicitud.estado} />
               </Link>
