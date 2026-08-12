@@ -12,7 +12,7 @@ import { MisEntregasOffline } from '../(protected)/mis-entregas/mis-entregas-off
 export default function OfflinePage() {
   return (
     <div className="mx-auto max-w-2xl p-4 md:p-6">
-      <p className="mb-4 rounded border border-amber-600/30 bg-amber-600/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-500">
+      <p className="mb-4 rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
         Sin conexión — mostrando la última ruta guardada en este dispositivo.
       </p>
       <MisEntregasOffline entregasIniciales={null} motivosIniciales={null} />

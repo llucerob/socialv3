@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { AsignacionLoteFormState } from '@/lib/rutas/actions'
 import type { FuncionarioTerreno } from '@/lib/entregas/types'
+import { Button } from '@/components/ui/Button'
 
 type AsignarLoteFormAction = (
   state: AsignacionLoteFormState,
@@ -28,13 +29,13 @@ export function AsignarLoteForm({
   return (
     <form id="asignar-lote" action={formAction} className="flex flex-wrap items-end gap-3">
       <div className="space-y-1">
-        <label htmlFor="responsable_id" className="text-sm font-medium">
+        <label htmlFor="responsable_id" className="text-sm font-medium text-text-primary">
           Asignar responsable a seleccionadas
         </label>
         <select
           id="responsable_id"
           name="responsable_id"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         >
           <option value="">Sin asignar</option>
           {funcionarios.map((funcionario) => (
@@ -46,27 +47,23 @@ export function AsignarLoteForm({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="fecha_programada" className="text-sm font-medium">
+        <label htmlFor="fecha_programada" className="text-sm font-medium text-text-primary">
           Fecha programada
         </label>
         <input
           id="fecha_programada"
           name="fecha_programada"
           type="date"
-          className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-black/10 px-4 py-2 text-sm font-medium disabled:opacity-50 dark:border-white/20"
-      >
+      <Button type="submit" variante="secondary" disabled={pending}>
         {pending ? 'Asignando…' : 'Asignar a seleccionadas'}
-      </button>
+      </Button>
 
       {state?.error && (
-        <p role="alert" className="w-full text-sm text-red-600">
+        <p role="alert" className="w-full text-sm text-danger-fg">
           {state.error}
         </p>
       )}

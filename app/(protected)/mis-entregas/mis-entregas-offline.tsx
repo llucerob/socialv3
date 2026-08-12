@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import type { RealizadaFormState, FallidaFormState } from '@/lib/entregas/actions'
 import type { EntregaConContexto } from '@/lib/entregas/types'
-import { ESTADO_ENTREGA_LABELS } from '@/lib/entregas/types'
 import type { MotivoEntregaFallida } from '@/lib/motivos-entrega/types'
 import { enlaceMapa } from '@/lib/rutas/mapas'
 import {
@@ -17,6 +16,21 @@ import { enviarOEncolar, iniciarSincronizacionAutomatica, suscribirseSync } from
 import { EntregaRealizadaForm } from './entrega-realizada-form'
 import { EntregaFallidaForm } from './entrega-fallida-form'
 import { IndicadorSincronizacion } from './sync-indicator'
+import { Card } from '@/components/ui/Card'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
+
+// EPIC 27 (US-27.06) — chip de "pendiente de sincronizar" por entrega,
+// distinto del indicador global (IndicadorSincronizacion, contador de la
+// cola completa): este marca un ítem puntual que ya se ve en la lista o el
+// detalle con un resultado guardado localmente pero aún no confirmado por
+// el servidor. Mismo tono `warning` que el resto de "pendiente" de la app.
+function BadgePendienteSync() {
+  return (
+    <span className="rounded-full bg-warning-bg px-2 py-0.5 text-xs whitespace-nowrap text-warning-fg">
+      Pendiente de sincronizar
+    </span>
+  )
+}
 
 type Vista = { tipo: 'lista' } | { tipo: 'detalle'; entregaId: string }
 
@@ -86,7 +100,7 @@ export function MisEntregasOffline({
   }
 
   if (cargando) {
-    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Cargando…</p>
+    return <p className="text-sm text-text-muted">Cargando…</p>
   }
 
   if (vista.tipo === 'detalle') {
@@ -94,8 +108,8 @@ export function MisEntregasOffline({
     if (!entrega) {
       return (
         <div className="space-y-4">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Esta entrega ya no está disponible localmente.</p>
-          <button type="button" onClick={() => setVista({ tipo: 'lista' })} className="text-sm underline">
+          <p className="text-sm text-text-muted">Esta entrega ya no está disponible localmente.</p>
+          <button type="button" onClick={() => setVista({ tipo: 'lista' })} className="text-sm text-brand-600 hover:underline">
             Volver a la ruta
           </button>
         </div>
@@ -114,53 +128,45 @@ export function MisEntregasOffline({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">Mis entregas</h1>
+        <h1 className="text-2xl font-semibold text-text-primary">Mis entregas</h1>
         <IndicadorSincronizacion />
       </div>
 
       {entregas.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">No tienes entregas asignadas para hoy.</p>
+        <p className="text-sm text-text-muted">No tienes entregas asignadas para hoy.</p>
       ) : (
         <ul className="space-y-3">
           {entregas.map((entrega) => (
-            <li key={entrega.id} className="rounded border border-black/10 p-4 dark:border-white/10">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-base font-medium">{entrega.tipo_ayuda_nombre}</span>
-                <div className="flex shrink-0 items-center gap-2">
-                  {entrega.estado_local === 'pendiente_sincronizar' && (
-                    <span className="rounded-full border border-amber-600/30 bg-amber-600/10 px-2 py-0.5 text-xs whitespace-nowrap text-amber-700 dark:text-amber-500">
-                      Pendiente de sincronizar
-                    </span>
-                  )}
-                  <span className="rounded bg-black/5 px-2 py-1 text-xs font-medium uppercase dark:bg-white/10">
-                    {ESTADO_ENTREGA_LABELS[entrega.estado]}
-                  </span>
+            <li key={entrega.id}>
+              <Card>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-base font-medium text-text-primary">{entrega.tipo_ayuda_nombre}</span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {entrega.estado_local === 'pendiente_sincronizar' && <BadgePendienteSync />}
+                    <EstadoBadge estado={entrega.estado} />
+                  </div>
                 </div>
-              </div>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                {entrega.grupo_familiar_direccion}
-                {entrega.grupo_familiar_sector && ` · ${entrega.grupo_familiar_sector}`}
-              </p>
-              {entrega.persona_nombre && (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">{entrega.persona_nombre}</p>
-              )}
-              {entrega.fecha_programada && (
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  Programada: {entrega.fecha_programada}
+                <p className="mt-1 text-sm text-text-muted">
+                  {entrega.grupo_familiar_direccion}
+                  {entrega.grupo_familiar_sector && ` · ${entrega.grupo_familiar_sector}`}
                 </p>
-              )}
-              <div className="mt-3 flex items-center gap-4 text-sm">
-                <button
-                  type="button"
-                  onClick={() => setVista({ tipo: 'detalle', entregaId: entrega.id })}
-                  className="font-medium underline"
-                >
-                  Ver detalle
-                </button>
-                <a href={enlaceMapa(entrega)} target="_blank" rel="noopener noreferrer" className="underline">
-                  Abrir en mapas
-                </a>
-              </div>
+                {entrega.persona_nombre && <p className="text-sm text-text-muted">{entrega.persona_nombre}</p>}
+                {entrega.fecha_programada && (
+                  <p className="mt-1 text-sm text-text-muted">Programada: {entrega.fecha_programada}</p>
+                )}
+                <div className="mt-3 flex items-center gap-4 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => setVista({ tipo: 'detalle', entregaId: entrega.id })}
+                    className="font-medium text-brand-600 hover:underline"
+                  >
+                    Ver detalle
+                  </button>
+                  <a href={enlaceMapa(entrega)} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">
+                    Abrir en mapas
+                  </a>
+                </div>
+              </Card>
             </li>
           ))}
         </ul>
@@ -182,35 +188,33 @@ function DetalleEntrega({
 }) {
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <button type="button" onClick={onVolver} className="text-sm underline">
+      <button type="button" onClick={onVolver} className="text-sm text-brand-600 hover:underline">
         ← Volver a la ruta
       </button>
 
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">{entrega.tipo_ayuda_nombre}</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold text-text-primary">{entrega.tipo_ayuda_nombre}</h1>
+          <p className="text-sm text-text-muted">
             {entrega.grupo_familiar_direccion}
             {entrega.grupo_familiar_sector && ` · ${entrega.grupo_familiar_sector}`}
           </p>
-          {entrega.persona_nombre && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">{entrega.persona_nombre}</p>
-          )}
-          <p className="mt-2 text-sm">
-            Estado: <span className="font-medium">{ESTADO_ENTREGA_LABELS[entrega.estado]}</span>
+          {entrega.persona_nombre && <p className="text-sm text-text-muted">{entrega.persona_nombre}</p>}
+          <p className="mt-2">
+            <EstadoBadge estado={entrega.estado} />
           </p>
           <a
             href={enlaceMapa(entrega)}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 inline-block text-sm underline"
+            className="mt-2 inline-block text-sm text-brand-600 hover:underline"
           >
             Abrir en mapas
           </a>
         </div>
         {entrega.estado_local === 'pendiente_sincronizar' && (
-          <span className="shrink-0 rounded-full border border-amber-600/30 bg-amber-600/10 px-2 py-0.5 text-xs whitespace-nowrap text-amber-700 dark:text-amber-500">
-            Pendiente de sincronizar
+          <span className="shrink-0">
+            <BadgePendienteSync />
           </span>
         )}
       </div>
@@ -221,15 +225,15 @@ function DetalleEntrega({
             action={crearAccionRealizada(entrega, onActualizar)}
             requiereEvidencia={entrega.tipo_ayuda_requiere_evidencia}
           />
-          <div className="border-t border-black/10 pt-6 dark:border-white/10">
-            <h2 className="mb-3 text-sm font-medium text-zinc-500 dark:text-zinc-400">¿No se pudo entregar?</h2>
+          <div className="border-t border-border pt-6">
+            <h2 className="mb-3 text-sm font-medium text-text-muted">¿No se pudo entregar?</h2>
             <EntregaFallidaForm action={crearAccionFallida(entrega, motivos, onActualizar)} motivos={motivos} />
           </div>
         </div>
       )}
 
       {entrega.estado === 'fallida' && (
-        <p className="text-sm text-amber-700 dark:text-amber-500">
+        <p className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
           Entrega marcada como fallida
           {entrega.motivo_fallo_nombre && `: ${entrega.motivo_fallo_nombre}`}. Bodega debe reprogramarla antes de un
           nuevo intento.
@@ -237,18 +241,20 @@ function DetalleEntrega({
       )}
 
       {entrega.estado === 'realizada' && (
-        <div className="rounded border border-black/10 p-4 text-sm dark:border-white/10">
-          <p>
+        <Card>
+          <p className="text-sm text-text-primary">
             Recibió: <span className="font-medium">{entrega.receptor_nombre}</span>
             {entrega.receptor_relacion && ` (${entrega.receptor_relacion})`}
           </p>
           {entrega.fecha_hora_entrega && (
-            <p className="text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-text-muted">
               {new Date(entrega.fecha_hora_entrega).toLocaleString('es-CL')}
             </p>
           )}
-          {entrega.observacion_entrega && <p className="mt-1 whitespace-pre-wrap">{entrega.observacion_entrega}</p>}
-        </div>
+          {entrega.observacion_entrega && (
+            <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">{entrega.observacion_entrega}</p>
+          )}
+        </Card>
       )}
     </div>
   )

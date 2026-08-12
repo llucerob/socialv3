@@ -11,8 +11,8 @@ export default async function ConfiguracionRutasPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Configuración de rutas</h1>
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+      <h1 className="text-2xl font-semibold text-text-primary">Configuración de rutas</h1>
+      <p className="text-sm text-text-muted">
         Punto de origen usado por el cálculo automático de orden de visitas (US-13.04) — por ejemplo, la sede
         municipal o el punto de inicio del funcionario.
       </p>

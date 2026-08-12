@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import type { RealizadaFormState } from '@/lib/entregas/actions'
+import { Button } from '@/components/ui/Button'
 
 type RealizadaFormAction = (
   state: RealizadaFormState,
@@ -21,8 +22,9 @@ function BotonUbicacion({
 
   return (
     <div className="space-y-1">
-      <button
+      <Button
         type="button"
+        variante="secondary"
         onClick={() => {
           if (!navigator.geolocation) {
             setEstado('error')
@@ -38,15 +40,12 @@ function BotonUbicacion({
             { enableHighAccuracy: true, timeout: 10000 }
           )
         }}
-        className="rounded border border-black/10 px-3 py-2 text-sm font-medium dark:border-white/20"
       >
         {estado === 'buscando' ? 'Obteniendo ubicación…' : 'Usar mi ubicación actual'}
-      </button>
-      {estado === 'lista' && (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Ubicación capturada.</p>
-      )}
+      </Button>
+      {estado === 'lista' && <p className="text-xs text-text-muted">Ubicación capturada.</p>}
       {estado === 'error' && (
-        <p className="text-xs text-red-600">No se pudo obtener la ubicación (opcional, puedes continuar).</p>
+        <p className="text-xs text-danger-fg">No se pudo obtener la ubicación (opcional, puedes continuar).</p>
       )}
     </div>
   )
@@ -62,6 +61,7 @@ export function EntregaRealizadaForm({
   const [state, formAction, pending] = useActionState(action, undefined)
   const valores = state?.valores
   const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null)
+  const claseCampo = 'w-full rounded-lg border border-border bg-transparent px-3 py-2 text-base text-text-primary'
 
   return (
     <form action={formAction} className="space-y-4">
@@ -74,7 +74,7 @@ export function EntregaRealizadaForm({
       )}
 
       <div className="space-y-1">
-        <label htmlFor="fecha_hora" className="text-sm font-medium">
+        <label htmlFor="fecha_hora" className="text-sm font-medium text-text-primary">
           Fecha y hora
         </label>
         <input
@@ -82,13 +82,13 @@ export function EntregaRealizadaForm({
           name="fecha_hora"
           type="datetime-local"
           defaultValue={valores?.fecha_hora}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-base dark:border-white/20"
+          className={claseCampo}
         />
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">Si la dejas vacía, se usa el momento actual.</p>
+        <p className="text-xs text-text-muted">Si la dejas vacía, se usa el momento actual.</p>
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="receptor_nombre" className="text-sm font-medium">
+        <label htmlFor="receptor_nombre" className="text-sm font-medium text-text-primary">
           Nombre de quien recibe *
         </label>
         <input
@@ -96,12 +96,12 @@ export function EntregaRealizadaForm({
           name="receptor_nombre"
           required
           defaultValue={valores?.receptor_nombre}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-base dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="receptor_relacion" className="text-sm font-medium">
+        <label htmlFor="receptor_relacion" className="text-sm font-medium text-text-primary">
           Relación con el beneficiario
         </label>
         <input
@@ -109,12 +109,12 @@ export function EntregaRealizadaForm({
           name="receptor_relacion"
           placeholder="madre, hijo, el mismo beneficiario…"
           defaultValue={valores?.receptor_relacion}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-base dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="archivo" className="text-sm font-medium">
+        <label htmlFor="archivo" className="text-sm font-medium text-text-primary">
           Evidencia fotográfica{requiereEvidencia ? ' *' : ''}
         </label>
         <input
@@ -124,12 +124,12 @@ export function EntregaRealizadaForm({
           accept="image/*"
           capture="environment"
           required={requiereEvidencia}
-          className="w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-foreground file:px-3 file:py-2 file:text-sm file:font-medium file:text-background"
+          className="w-full text-sm text-text-primary file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="observacion" className="text-sm font-medium">
+        <label htmlFor="observacion" className="text-sm font-medium text-text-primary">
           Observación
         </label>
         <textarea
@@ -137,25 +137,21 @@ export function EntregaRealizadaForm({
           name="observacion"
           rows={2}
           defaultValue={valores?.observacion}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-base dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <BotonUbicacion onUbicacion={(lat, lng) => setUbicacion({ lat, lng })} />
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded bg-foreground px-4 py-3 text-base font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="w-full py-3 text-base">
         {pending ? 'Guardando…' : 'Marcar como realizada'}
-      </button>
+      </Button>
     </form>
   )
 }

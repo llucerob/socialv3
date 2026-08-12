@@ -5,10 +5,11 @@ import { registrarEntregaRealizada, registrarEntregaFallida } from '@/lib/entreg
 import { obtenerSolicitud } from '@/lib/solicitudes/dal'
 import { obtenerTipoAyuda } from '@/lib/ayudas/dal'
 import { listarMotivosEntregaFallidaActivos } from '@/lib/motivos-entrega/dal'
-import { ESTADO_ENTREGA_LABELS } from '@/lib/entregas/types'
 import { enlaceMapa } from '@/lib/rutas/mapas'
 import { EntregaRealizadaForm } from '../entrega-realizada-form'
 import { EntregaFallidaForm } from '../entrega-fallida-form'
+import { Card } from '@/components/ui/Card'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
 
 const ROLES_TERRENO = ['administrador', 'terreno_repartidor'] as const
 
@@ -43,18 +44,16 @@ export default async function MiEntregaPage({
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">{entrega.tipo_ayuda_nombre}</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <h1 className="text-2xl font-semibold text-text-primary">{entrega.tipo_ayuda_nombre}</h1>
+        <p className="text-sm text-text-muted">
           {entrega.grupo_familiar_direccion}
           {entrega.grupo_familiar_sector && ` · ${entrega.grupo_familiar_sector}`}
         </p>
-        {entrega.persona_nombre && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">{entrega.persona_nombre}</p>
-        )}
-        <p className="mt-2 text-sm">
-          Estado: <span className="font-medium">{ESTADO_ENTREGA_LABELS[entrega.estado]}</span>
+        {entrega.persona_nombre && <p className="text-sm text-text-muted">{entrega.persona_nombre}</p>}
+        <p className="mt-2 flex items-center gap-2">
+          <EstadoBadge estado={entrega.estado} />
         </p>
-        <a href={enlaceMapa(entrega)} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-sm underline">
+        <a href={enlaceMapa(entrega)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-brand-600 hover:underline">
           Abrir en mapas
         </a>
       </div>
@@ -62,17 +61,15 @@ export default async function MiEntregaPage({
       {entrega.estado === 'pendiente' && (
         <div className="space-y-8">
           <EntregaRealizadaForm action={registrarRealizadaConId} requiereEvidencia={requiereEvidencia} />
-          <div className="border-t border-black/10 pt-6 dark:border-white/10">
-            <h2 className="mb-3 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              ¿No se pudo entregar?
-            </h2>
+          <div className="border-t border-border pt-6">
+            <h2 className="mb-3 text-sm font-medium text-text-muted">¿No se pudo entregar?</h2>
             <EntregaFallidaForm action={registrarFallidaConId} motivos={motivosActivos} />
           </div>
         </div>
       )}
 
       {entrega.estado === 'fallida' && (
-        <p className="text-sm text-amber-700 dark:text-amber-500">
+        <p className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
           Entrega marcada como fallida
           {entrega.motivo_fallo_nombre && `: ${entrega.motivo_fallo_nombre}`}. Bodega debe
           reprogramarla antes de un nuevo intento.
@@ -80,20 +77,20 @@ export default async function MiEntregaPage({
       )}
 
       {entrega.estado === 'realizada' && (
-        <div className="rounded border border-black/10 p-4 text-sm dark:border-white/10">
-          <p>
+        <Card>
+          <p className="text-sm text-text-primary">
             Recibió: <span className="font-medium">{entrega.receptor_nombre}</span>
             {entrega.receptor_relacion && ` (${entrega.receptor_relacion})`}
           </p>
           {entrega.fecha_hora_entrega && (
-            <p className="text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-text-muted">
               {new Date(entrega.fecha_hora_entrega).toLocaleString('es-CL')}
             </p>
           )}
           {entrega.observacion_entrega && (
-            <p className="mt-1 whitespace-pre-wrap">{entrega.observacion_entrega}</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">{entrega.observacion_entrega}</p>
           )}
-        </div>
+        </Card>
       )}
     </div>
   )

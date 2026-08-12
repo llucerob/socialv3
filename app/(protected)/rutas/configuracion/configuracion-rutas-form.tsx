@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { ConfiguracionRutasFormState } from '@/lib/rutas/actions'
 import type { ConfiguracionRutas } from '@/lib/rutas/types'
+import { Button } from '@/components/ui/Button'
 
 type ConfiguracionRutasFormAction = (
   state: ConfiguracionRutasFormState,
@@ -17,11 +18,12 @@ export function ConfiguracionRutasForm({
   defaultValues: ConfiguracionRutas
 }) {
   const [state, formAction, pending] = useActionState(action, undefined)
+  const claseCampo = 'w-full rounded-lg border border-border bg-transparent px-3 py-2 text-text-primary'
 
   return (
     <form action={formAction} className="max-w-md space-y-4">
       <div className="space-y-1">
-        <label htmlFor="origen_nombre" className="text-sm font-medium">
+        <label htmlFor="origen_nombre" className="text-sm font-medium text-text-primary">
           Nombre del punto de origen *
         </label>
         <input
@@ -29,13 +31,13 @@ export function ConfiguracionRutasForm({
           name="origen_nombre"
           required
           defaultValue={defaultValues.origen_nombre}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label htmlFor="origen_latitud" className="text-sm font-medium">
+          <label htmlFor="origen_latitud" className="text-sm font-medium text-text-primary">
             Latitud *
           </label>
           <input
@@ -47,11 +49,11 @@ export function ConfiguracionRutasForm({
             max={90}
             required
             defaultValue={defaultValues.origen_latitud}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+            className={claseCampo}
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="origen_longitud" className="text-sm font-medium">
+          <label htmlFor="origen_longitud" className="text-sm font-medium text-text-primary">
             Longitud *
           </label>
           <input
@@ -63,24 +65,20 @@ export function ConfiguracionRutasForm({
             max={180}
             required
             defaultValue={defaultValues.origen_longitud}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+            className={claseCampo}
           />
         </div>
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Guardando…' : 'Guardar configuración'}
-      </button>
+      </Button>
     </form>
   )
 }

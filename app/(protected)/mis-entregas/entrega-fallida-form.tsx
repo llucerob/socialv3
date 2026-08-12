@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { FallidaFormState } from '@/lib/entregas/actions'
 import type { MotivoEntregaFallida } from '@/lib/motivos-entrega/types'
+import { Button } from '@/components/ui/Button'
 
 type FallidaFormAction = (
   state: FallidaFormState,
@@ -26,7 +27,7 @@ export function EntregaFallidaForm({
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-1">
-        <label htmlFor="motivo_fallo" className="text-sm font-medium">
+        <label htmlFor="motivo_fallo" className="text-sm font-medium text-text-primary">
           Motivo *
         </label>
         <select
@@ -34,7 +35,7 @@ export function EntregaFallidaForm({
           name="motivo_fallo"
           required
           defaultValue={valores?.motivo_fallo ?? ''}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-base dark:border-white/20"
+          className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-base text-text-primary"
         >
           <option value="" disabled>
             Selecciona…
@@ -48,7 +49,7 @@ export function EntregaFallidaForm({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="observacion" className="text-sm font-medium">
+        <label htmlFor="observacion" className="text-sm font-medium text-text-primary">
           Observación
         </label>
         <textarea
@@ -56,23 +57,19 @@ export function EntregaFallidaForm({
           name="observacion"
           rows={2}
           defaultValue={valores?.observacion}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-base dark:border-white/20"
+          className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-base text-text-primary"
         />
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full rounded border border-red-600/30 px-4 py-3 text-base font-medium text-red-600 disabled:opacity-50"
-      >
+      <Button type="submit" variante="danger" disabled={pending} className="w-full py-3 text-base">
         {pending ? 'Guardando…' : 'Marcar como fallida'}
-      </button>
+      </Button>
     </form>
   )
 }

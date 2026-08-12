@@ -29,8 +29,8 @@ export function IndicadorSincronizacion() {
 
   if (estado.errores > 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-red-600/30 bg-red-600/10 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-red-600">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-600" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-danger-bg px-2.5 py-1 text-xs font-medium whitespace-nowrap text-danger-fg">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-danger-fg" />
         Error de sincronización ({estado.errores})
       </span>
     )
@@ -38,16 +38,16 @@ export function IndicadorSincronizacion() {
 
   if (estado.pendientes > 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-600/30 bg-amber-600/10 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-amber-700 dark:text-amber-500">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-bg px-2.5 py-1 text-xs font-medium whitespace-nowrap text-warning-fg">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warning-fg" />
         Pendiente de sincronizar ({estado.pendientes})
       </span>
     )
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-green-600/30 bg-green-600/10 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-green-700 dark:text-green-500">
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-600" />
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-success-bg px-2.5 py-1 text-xs font-medium whitespace-nowrap text-success-fg">
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success-fg" />
       Sincronizado
     </span>
   )
