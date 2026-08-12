@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { enviarAEvaluacion } from '@/lib/solicitudes/actions'
+import { Button } from '@/components/ui/Button'
 
 export function EnviarEvaluacionButton({ solicitudId }: { solicitudId: string }) {
   const accion = enviarAEvaluacion.bind(null, solicitudId)
@@ -9,15 +10,11 @@ export function EnviarEvaluacionButton({ solicitudId }: { solicitudId: string })
 
   return (
     <form action={formAction} className="space-y-2">
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Enviando…' : 'Enviar a evaluación'}
-      </button>
+      </Button>
       {state?.bloqueado && (
-        <p role="alert" className="max-w-md text-sm text-red-600">
+        <p role="alert" className="max-w-md text-sm text-danger-fg">
           {state.bloqueado}
         </p>
       )}

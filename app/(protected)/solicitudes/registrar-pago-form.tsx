@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import type { PagoReembolsoFormState } from '@/lib/reembolsos/actions'
+import { Button } from '@/components/ui/Button'
 
 type RegistrarPagoFormAction = (
   state: PagoReembolsoFormState,
@@ -15,7 +16,7 @@ export function RegistrarPagoForm({ action }: { action: RegistrarPagoFormAction 
   return (
     <form action={formAction} className="max-w-md space-y-3">
       <div className="space-y-1">
-        <label htmlFor="fecha_pago" className="text-sm font-medium">
+        <label htmlFor="fecha_pago" className="text-sm font-medium text-text-primary">
           Fecha de pago *
         </label>
         <input
@@ -24,12 +25,12 @@ export function RegistrarPagoForm({ action }: { action: RegistrarPagoFormAction 
           type="date"
           required
           defaultValue={valores?.fecha_pago ?? new Date().toISOString().slice(0, 10)}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="monto_pagado" className="text-sm font-medium">
+        <label htmlFor="monto_pagado" className="text-sm font-medium text-text-primary">
           Monto pagado *
         </label>
         <input
@@ -40,12 +41,12 @@ export function RegistrarPagoForm({ action }: { action: RegistrarPagoFormAction 
           step="1"
           required
           defaultValue={valores?.monto_pagado}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="medio_pago" className="text-sm font-medium">
+        <label htmlFor="medio_pago" className="text-sm font-medium text-text-primary">
           Medio de pago *
         </label>
         <input
@@ -54,12 +55,12 @@ export function RegistrarPagoForm({ action }: { action: RegistrarPagoFormAction 
           required
           placeholder="transferencia, efectivo, cheque…"
           defaultValue={valores?.medio_pago}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="observacion" className="text-sm font-medium">
+        <label htmlFor="observacion" className="text-sm font-medium text-text-primary">
           Observación
         </label>
         <textarea
@@ -67,23 +68,19 @@ export function RegistrarPagoForm({ action }: { action: RegistrarPagoFormAction 
           name="observacion"
           rows={2}
           defaultValue={valores?.observacion}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Guardando…' : 'Registrar pago'}
-      </button>
+      </Button>
     </form>
   )
 }

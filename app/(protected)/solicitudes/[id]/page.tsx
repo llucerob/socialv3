@@ -8,7 +8,7 @@ import {
   detectarPosiblesDuplicados,
 } from '@/lib/solicitudes/dal'
 import { anularSolicitud, volverAEvaluacion } from '@/lib/solicitudes/actions'
-import { ESTADO_SOLICITUD_LABELS, type EstadoSolicitud } from '@/lib/solicitudes/types'
+import type { EstadoSolicitud } from '@/lib/solicitudes/types'
 import { listarEvaluacionesDeSolicitud } from '@/lib/evaluaciones/dal'
 import { RECOMENDACION_LABELS } from '@/lib/evaluaciones/types'
 import { obtenerTipoAyuda } from '@/lib/ayudas/dal'
@@ -64,6 +64,11 @@ import { AprobarForm } from '../aprobar-form'
 import { RechazarForm } from '../rechazar-form'
 import { SalidaStockForm } from '../salida-stock-form'
 import { EntregaAsignacionForm } from '../entrega-asignacion-form'
+import { Card } from '@/components/ui/Card'
+import { Button, ButtonLink } from '@/components/ui/Button'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
+import { BannerSensible } from '@/components/ui/BannerSensible'
 
 // EPIC 07: gestión general de la solicitud (crear, editar, enviar, anular).
 const ROLES_GESTION_SOLICITUD = ['administrador', 'evaluador_social']
@@ -276,52 +281,49 @@ export default async function DetalleSolicitudPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 rounded-xl bg-brand-800 p-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{solicitud.tipo_ayuda_nombre}</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold text-white">{solicitud.tipo_ayuda_nombre}</h1>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-brand-100">
             <Link href={`/hogares/${solicitud.grupo_familiar_id}`} className="underline">
               {solicitud.grupo_familiar_direccion}
             </Link>
-            {solicitud.persona_nombre ? ` · ${solicitud.persona_nombre}` : ''} · estado{' '}
-            {ESTADO_SOLICITUD_LABELS[solicitud.estado]}
+            {solicitud.persona_nombre && <span>· {solicitud.persona_nombre}</span>}
+            <EstadoBadge estado={solicitud.estado} />
           </p>
         </div>
         {puedeGestionar && ESTADOS_EDITABLES.includes(solicitud.estado) && (
-          <Link
-            href={`/solicitudes/${solicitud.id}/editar`}
-            className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-          >
+          <ButtonLink href={`/solicitudes/${solicitud.id}/editar`} variante="inverse">
             Editar
-          </Link>
+          </ButtonLink>
         )}
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Fecha</h2>
-          <p>{solicitud.fecha_solicitud}</p>
-        </div>
-        <div>
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Motivo</h2>
-          <p className="whitespace-pre-wrap">{solicitud.motivo}</p>
-        </div>
-        {solicitud.monto_solicitado !== null && (
+      <Card header={<h2 className="font-medium text-text-primary">Datos de la solicitud</h2>}>
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              Monto solicitado
-            </h2>
-            <p>${solicitud.monto_solicitado.toLocaleString('es-CL')}</p>
+            <h3 className="text-sm font-medium text-text-muted">Fecha</h3>
+            <p className="text-text-primary">{solicitud.fecha_solicitud}</p>
           </div>
-        )}
-        <div className="sm:col-span-2">
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Observaciones</h2>
-          <p className="whitespace-pre-wrap">{solicitud.observaciones ?? '—'}</p>
+          <div>
+            <h3 className="text-sm font-medium text-text-muted">Motivo</h3>
+            <p className="whitespace-pre-wrap text-text-primary">{solicitud.motivo}</p>
+          </div>
+          {solicitud.monto_solicitado !== null && (
+            <div>
+              <h3 className="text-sm font-medium text-text-muted">Monto solicitado</h3>
+              <p className="text-text-primary">${solicitud.monto_solicitado.toLocaleString('es-CL')}</p>
+            </div>
+          )}
+          <div className="sm:col-span-2">
+            <h3 className="text-sm font-medium text-text-muted">Observaciones</h3>
+            <p className="whitespace-pre-wrap text-text-primary">{solicitud.observaciones ?? '—'}</p>
+          </div>
         </div>
-      </section>
+      </Card>
 
       <section className="space-y-3">
-        <h2 className="font-medium">Documentos</h2>
+        <h2 className="font-medium text-text-primary">Documentos</h2>
         {puedeGestionar && <DocumentoUploadForm action={subirDocumentoConId} />}
         <DocumentosSection
           documentos={documentos}
@@ -337,32 +339,32 @@ export default async function DetalleSolicitudPage({
 
       {puedeRegistrarPago && esReembolso && (
         <section className="space-y-3">
-          <h2 className="font-medium">Pago</h2>
+          <h2 className="font-medium text-text-primary">Pago</h2>
           {pagoReembolso ? (
-            <div className="rounded border border-black/10 p-3 text-sm dark:border-white/10">
-              <p>
+            <Card>
+              <p className="text-sm text-text-primary">
                 Pagado: <span className="font-medium">${pagoReembolso.monto_pagado.toLocaleString('es-CL')}</span>
                 {' · '}
                 {pagoReembolso.medio_pago} · {pagoReembolso.fecha_pago}
               </p>
-              <p className="text-zinc-500 dark:text-zinc-400">
+              <p className="text-sm text-text-muted">
                 Registrado por {pagoReembolso.registrado_por_nombre ?? 'usuario desconocido'}
               </p>
               {pagoReembolso.observacion && (
-                <p className="mt-1 whitespace-pre-wrap">{pagoReembolso.observacion}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">{pagoReembolso.observacion}</p>
               )}
-            </div>
+            </Card>
           ) : puedeRegistrarPagoAhora ? (
             <>
               {decisionParaPago?.monto_aprobado !== null && decisionParaPago?.monto_aprobado !== undefined && (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                <p className="text-sm text-text-muted">
                   Monto aprobado: ${decisionParaPago.monto_aprobado.toLocaleString('es-CL')}
                 </p>
               )}
               <RegistrarPagoForm action={registrarPagoConId} />
             </>
           ) : (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-text-muted">
               La solicitud debe estar aprobada para registrar el pago.
             </p>
           )}
@@ -371,23 +373,23 @@ export default async function DetalleSolicitudPage({
 
       {puedeVerStock && (
         <section className="space-y-3">
-          <h2 className="font-medium">Stock</h2>
+          <h2 className="font-medium text-text-primary">Stock</h2>
           {puedeRegistrarSalidaStock ? (
             <SalidaStockForm action={registrarSalidaStockConId} productos={productos} />
           ) : (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-text-muted">
               La solicitud debe estar aprobada para registrar una salida de stock.
             </p>
           )}
           {movimientosStock.length > 0 && (
-            <ul className="divide-y divide-black/10 rounded border border-black/10 text-sm dark:divide-white/10 dark:border-white/10">
+            <ul className="divide-y divide-border rounded-xl border border-border bg-surface text-sm">
               {movimientosStock.map((movimiento) => (
                 <li key={movimiento.id} className="flex items-center justify-between px-4 py-2">
-                  <span>
+                  <span className="text-text-primary">
                     {movimiento.producto_nombre} · {movimiento.cantidad} {movimiento.producto_unidad_medida}
                     {movimiento.observacion ? ` · ${movimiento.observacion}` : ''}
                   </span>
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="text-xs text-text-muted">
                     {new Date(movimiento.created_at).toLocaleString('es-CL')}
                   </span>
                 </li>
@@ -399,7 +401,7 @@ export default async function DetalleSolicitudPage({
 
       {puedeGestionarEntregas && (tipoAyuda?.requiere_entrega ?? false) && (
         <section className="space-y-3">
-          <h2 className="font-medium">Entrega</h2>
+          <h2 className="font-medium text-text-primary">Entrega</h2>
 
           {!entrega && puedeCrearEntrega && (
             <EntregaAsignacionForm
@@ -409,14 +411,14 @@ export default async function DetalleSolicitudPage({
             />
           )}
           {!entrega && !puedeCrearEntrega && (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-text-muted">
               La solicitud debe estar aprobada para generar una entrega.
             </p>
           )}
 
           {entrega && (
             <div className="space-y-3">
-              <p className="text-sm">
+              <p className="text-sm text-text-primary">
                 Estado: <span className="font-medium">{ESTADO_ENTREGA_LABELS[entrega.estado]}</span>
                 {entrega.fecha_programada && ` · programada ${entrega.fecha_programada}`}
                 {' · responsable: '}
@@ -433,7 +435,7 @@ export default async function DetalleSolicitudPage({
 
               {entrega.estado === 'fallida' && (
                 <div className="space-y-2">
-                  <p className="text-sm text-amber-700 dark:text-amber-500">
+                  <p className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
                     Entrega fallida
                     {entrega.motivo_fallo_nombre && `: ${entrega.motivo_fallo_nombre}`}
                     {entrega.observacion_fallo && ` — ${entrega.observacion_fallo}`}
@@ -450,29 +452,29 @@ export default async function DetalleSolicitudPage({
               )}
 
               {entrega.estado === 'realizada' && (
-                <div className="rounded border border-black/10 p-3 text-sm dark:border-white/10">
-                  <p>
+                <Card>
+                  <p className="text-sm text-text-primary">
                     Recibió: <span className="font-medium">{entrega.receptor_nombre}</span>
                     {entrega.receptor_relacion && ` (${entrega.receptor_relacion})`}
                   </p>
                   {entrega.fecha_hora_entrega && (
-                    <p className="text-zinc-500 dark:text-zinc-400">
+                    <p className="text-sm text-text-muted">
                       {new Date(entrega.fecha_hora_entrega).toLocaleString('es-CL')}
                     </p>
                   )}
                   {entrega.observacion_entrega && (
-                    <p className="mt-1 whitespace-pre-wrap">{entrega.observacion_entrega}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">{entrega.observacion_entrega}</p>
                   )}
                   {entrega.latitud !== null && entrega.longitud !== null && (
-                    <p className="mt-1 text-zinc-500 dark:text-zinc-400">
+                    <p className="mt-1 text-sm text-text-muted">
                       Ubicación: {entrega.latitud}, {entrega.longitud}
                     </p>
                   )}
-                </div>
+                </Card>
               )}
 
               {historialEntrega.length > 0 && (
-                <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
+                <ul className="space-y-1 text-sm text-text-muted">
                   {historialEntrega.map((cambio) => (
                     <li key={cambio.id}>
                       {new Date(cambio.creado_en).toLocaleString('es-CL')} · {cambio.campo}:{' '}
@@ -488,15 +490,13 @@ export default async function DetalleSolicitudPage({
 
       {!puedeGestionarEntregas && (tipoAyuda?.requiere_entrega ?? false) && (
         <section className="space-y-3">
-          <h2 className="font-medium">Entrega</h2>
+          <h2 className="font-medium text-text-primary">Entrega</h2>
 
           {!entregaLectura ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Sin entrega generada todavía.
-            </p>
+            <p className="text-sm text-text-muted">Sin entrega generada todavía.</p>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm">
+              <p className="text-sm text-text-primary">
                 Estado: <span className="font-medium">{ESTADO_ENTREGA_LABELS[entregaLectura.estado]}</span>
                 {entregaLectura.fecha_programada && ` · programada ${entregaLectura.fecha_programada}`}
                 {' · responsable: '}
@@ -504,7 +504,7 @@ export default async function DetalleSolicitudPage({
               </p>
 
               {entregaLectura.estado === 'fallida' && (
-                <p className="text-sm text-amber-700 dark:text-amber-500">
+                <p className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
                   Entrega fallida
                   {entregaLectura.motivo_fallo_nombre && `: ${entregaLectura.motivo_fallo_nombre}`}
                   {entregaLectura.observacion_fallo && ` — ${entregaLectura.observacion_fallo}`}
@@ -512,25 +512,25 @@ export default async function DetalleSolicitudPage({
               )}
 
               {entregaLectura.estado === 'realizada' && (
-                <div className="rounded border border-black/10 p-3 text-sm dark:border-white/10">
-                  <p>
+                <Card>
+                  <p className="text-sm text-text-primary">
                     Recibió: <span className="font-medium">{entregaLectura.receptor_nombre}</span>
                     {entregaLectura.receptor_relacion && ` (${entregaLectura.receptor_relacion})`}
                   </p>
                   {entregaLectura.fecha_hora_entrega && (
-                    <p className="text-zinc-500 dark:text-zinc-400">
+                    <p className="text-sm text-text-muted">
                       {new Date(entregaLectura.fecha_hora_entrega).toLocaleString('es-CL')}
                     </p>
                   )}
                   {entregaLectura.observacion_entrega && (
-                    <p className="mt-1 whitespace-pre-wrap">{entregaLectura.observacion_entrega}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">{entregaLectura.observacion_entrega}</p>
                   )}
                   {entregaLectura.latitud !== null && entregaLectura.longitud !== null && (
-                    <p className="mt-1 text-zinc-500 dark:text-zinc-400">
+                    <p className="mt-1 text-sm text-text-muted">
                       Ubicación: {entregaLectura.latitud}, {entregaLectura.longitud}
                     </p>
                   )}
-                </div>
+                </Card>
               )}
             </div>
           )}
@@ -539,9 +539,9 @@ export default async function DetalleSolicitudPage({
 
       {puedeVerSensible && (
         <section>
-          <h2 className="font-medium">Historial de ayudas del hogar</h2>
+          <h2 className="font-medium text-text-primary">Historial de ayudas del hogar</h2>
           {posiblesDuplicados.length > 0 && (
-            <p className="mt-2 rounded border border-amber-600/30 bg-amber-600/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-500">
+            <p className="mt-2 rounded-lg bg-warning-bg px-4 py-2 text-sm text-warning-fg">
               Posible duplicidad: este hogar tiene {posiblesDuplicados.length} solicitud
               {posiblesDuplicados.length > 1 ? 'es' : ''} más de &quot;{solicitud.tipo_ayuda_nombre}
               &quot; que no está{posiblesDuplicados.length > 1 ? 'n' : ''} rechazada
@@ -550,31 +550,25 @@ export default async function DetalleSolicitudPage({
             </p>
           )}
           {ayudasPrevias.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              Sin otras solicitudes registradas para este hogar.
-            </p>
+            <p className="mt-2 text-sm text-text-muted">Sin otras solicitudes registradas para este hogar.</p>
           ) : (
-            <ul className="mt-2 divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+            <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
               {ayudasPrevias.map((previa) => {
                 const esDuplicado = posiblesDuplicados.some((d) => d.id === previa.id)
                 return (
                   <li key={previa.id}>
                     <Link
                       href={`/solicitudes/${previa.id}`}
-                      className="flex items-center justify-between px-4 py-3 hover:bg-black/5 dark:hover:bg-white/10"
+                      className="flex items-center justify-between px-4 py-3 hover:bg-surface-alt"
                     >
                       <span>
-                        <span className="font-medium">{previa.tipo_ayuda_nombre}</span>
-                        <span className="ml-2 text-sm text-zinc-500 dark:text-zinc-400">
-                          {previa.fecha_solicitud}
-                        </span>
+                        <span className="font-medium text-text-primary">{previa.tipo_ayuda_nombre}</span>
+                        <span className="ml-2 text-sm text-text-muted">{previa.fecha_solicitud}</span>
                         {esDuplicado && (
-                          <span className="ml-2 text-xs text-amber-600">posible duplicado</span>
+                          <span className="ml-2 text-xs text-warning-fg">posible duplicado</span>
                         )}
                       </span>
-                      <span className="text-xs uppercase text-zinc-500 dark:text-zinc-400">
-                        {ESTADO_SOLICITUD_LABELS[previa.estado]}
-                      </span>
+                      <EstadoBadge estado={previa.estado} />
                     </Link>
                   </li>
                 )
@@ -591,12 +585,9 @@ export default async function DetalleSolicitudPage({
           )}
           {ESTADOS_ANULABLES.includes(solicitud.estado) && (
             <form action={anularConId}>
-              <button
-                type="submit"
-                className="rounded border border-red-600/30 px-4 py-2 text-sm font-medium text-red-600"
-              >
+              <Button type="submit" variante="danger">
                 Anular solicitud
-              </button>
+              </Button>
             </form>
           )}
         </section>
@@ -604,7 +595,7 @@ export default async function DetalleSolicitudPage({
 
       {puedeObservar && solicitud.estado === 'en_evaluacion' && (
         <section>
-          <h2 className="mb-2 font-medium">Observar solicitud</h2>
+          <h2 className="mb-2 font-medium text-text-primary">Observar solicitud</h2>
           <ObservarForm solicitudId={solicitud.id} />
         </section>
       )}
@@ -612,39 +603,34 @@ export default async function DetalleSolicitudPage({
       {puedeObservar && solicitud.estado === 'observada' && (
         <section>
           <form action={volverAEvaluacionConId}>
-            <button
-              type="submit"
-              className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background"
-            >
-              Volver a evaluación
-            </button>
+            <Button type="submit">Volver a evaluación</Button>
           </form>
         </section>
       )}
 
       {puedeVerSensible && (
         <section>
-          <h2 className="font-medium">Evaluación social</h2>
+          <h2 className="font-medium text-text-primary">Evaluación social</h2>
+          <BannerSensible>
+            Información sensible — visible solo para evaluador social, aprobador y administrador.
+          </BannerSensible>
 
           {evaluaciones.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              Sin evaluaciones registradas todavía.
-            </p>
+            <p className="mt-2 text-sm text-text-muted">Sin evaluaciones registradas todavía.</p>
           ) : (
             <ul className="mt-2 space-y-3">
               {evaluaciones.map((evaluacion) => (
-                <li
-                  key={evaluacion.id}
-                  className="rounded border border-black/10 p-3 text-sm dark:border-white/10"
-                >
-                  <p className="font-medium">
-                    {RECOMENDACION_LABELS[evaluacion.recomendacion]} ·{' '}
-                    <span className="font-normal text-zinc-500 dark:text-zinc-400">
-                      {evaluacion.evaluador_nombre ?? 'Evaluador'} ·{' '}
-                      {new Date(evaluacion.created_at).toLocaleString('es-CL')}
-                    </span>
-                  </p>
-                  <p className="mt-1 whitespace-pre-wrap">{evaluacion.fundamento}</p>
+                <li key={evaluacion.id}>
+                  <Card>
+                    <p className="text-sm font-medium text-text-primary">
+                      {RECOMENDACION_LABELS[evaluacion.recomendacion]} ·{' '}
+                      <span className="font-normal text-text-muted">
+                        {evaluacion.evaluador_nombre ?? 'Evaluador'} ·{' '}
+                        {new Date(evaluacion.created_at).toLocaleString('es-CL')}
+                      </span>
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">{evaluacion.fundamento}</p>
+                  </Card>
                 </li>
               ))}
             </ul>
@@ -661,46 +647,62 @@ export default async function DetalleSolicitudPage({
       {puedeVerInformes && (
         <section>
           <div className="flex items-center justify-between">
-            <h2 className="font-medium">Informe social</h2>
+            <h2 className="font-medium text-text-primary">Informe social</h2>
             {puedeRegistrarInformes && (
-              <Link
+              <ButtonLink
                 href={`/hogares/${solicitud.grupo_familiar_id}/informes-sociales/nuevo?solicitud_id=${solicitud.id}`}
-                className="rounded border border-black/10 px-3 py-1.5 text-sm font-medium dark:border-white/20"
+                variante="secondary"
               >
                 Registrar informe para esta solicitud
-              </Link>
+              </ButtonLink>
             )}
           </div>
 
+          <BannerSensible>
+            Información sensible — el acceso a cada informe respeta además su nivel de confidencialidad.
+          </BannerSensible>
+
           {rshSuperaUmbral && informesSociales.length === 0 && (
-            <p className="mt-2 rounded border border-amber-600/30 bg-amber-600/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-500">
-              Este hogar supera el {UMBRAL_ELEGIBILIDAD_RSH}% RSH. No se puede aprobar por excepción
-              (US-05.05) hasta registrar un informe social asociado a esta solicitud.
-            </p>
+            <CardExcepcion>
+              <div className="flex items-start gap-3">
+                <BadgeExcepcion texto="Excepción RSH" />
+                <p>
+                  Este hogar supera el {UMBRAL_ELEGIBILIDAD_RSH}% RSH. No se puede aprobar por excepción
+                  (US-05.05) hasta registrar un informe social asociado a esta solicitud.
+                </p>
+              </div>
+            </CardExcepcion>
           )}
 
           {esReembolsoExcepcional && informesSociales.length === 0 && (
-            <p className="mt-2 rounded border border-amber-600/30 bg-amber-600/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-500">
-              Este reembolso excepcional no se puede aprobar (US-25.01/25.04) hasta registrar un informe
-              social asociado a esta solicitud.
-            </p>
+            <CardExcepcion>
+              <div className="flex items-start gap-3">
+                <BadgeExcepcion texto="Reembolso excepcional" />
+                <p>
+                  Este reembolso excepcional no se puede aprobar (US-25.01/25.04) hasta registrar un
+                  informe social asociado a esta solicitud.
+                </p>
+              </div>
+            </CardExcepcion>
           )}
 
           {informesSociales.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              Sin informes sociales asociados a esta solicitud.
-            </p>
+            <p className="mt-2 text-sm text-text-muted">Sin informes sociales asociados a esta solicitud.</p>
           ) : (
             <ul className="mt-2 space-y-3">
               {informesSociales.map((informe) => (
-                <li key={informe.id} className="rounded border border-black/10 p-3 text-sm dark:border-white/10">
-                  <p className="font-medium">
-                    {informe.motivo} ·{' '}
-                    <span className="font-normal text-zinc-500 dark:text-zinc-400">
-                      {informe.creado_por_nombre ?? 'Asistente social'} · {informe.fecha_informe}
-                    </span>
-                  </p>
-                  <p className="mt-1 whitespace-pre-wrap">{informe.recomendacion_profesional}</p>
+                <li key={informe.id}>
+                  <Card>
+                    <p className="text-sm font-medium text-text-primary">
+                      {informe.motivo} ·{' '}
+                      <span className="font-normal text-text-muted">
+                        {informe.creado_por_nombre ?? 'Asistente social'} · {informe.fecha_informe}
+                      </span>
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">
+                      {informe.recomendacion_profesional}
+                    </p>
+                  </Card>
                 </li>
               ))}
             </ul>
@@ -710,43 +712,54 @@ export default async function DetalleSolicitudPage({
 
       {puedeVerSensible && decision && (
         <section>
-          <h2 className="font-medium">Decisión</h2>
-          <div className="mt-2 rounded border border-black/10 p-3 text-sm dark:border-white/10">
-            <p className="font-medium">
+          <h2 className="font-medium text-text-primary">Decisión</h2>
+          <Card className="mt-2">
+            <p className="text-sm font-medium text-text-primary">
               {DECISION_LABELS[decision.decision]} ·{' '}
-              <span className="font-normal text-zinc-500 dark:text-zinc-400">
+              <span className="font-normal text-text-muted">
                 {decision.aprobador_nombre ?? 'Aprobador'} ·{' '}
                 {new Date(decision.created_at).toLocaleString('es-CL')}
               </span>
             </p>
             {decision.monto_aprobado !== null && (
-              <p className="mt-1">Monto aprobado: ${decision.monto_aprobado.toLocaleString('es-CL')}</p>
+              <p className="mt-1 text-sm text-text-primary">
+                Monto aprobado: ${decision.monto_aprobado.toLocaleString('es-CL')}
+              </p>
             )}
             {decision.cantidad_aprobada !== null && (
-              <p className="mt-1">Cantidad/detalle aprobado: {decision.cantidad_aprobada}</p>
+              <p className="mt-1 text-sm text-text-primary">
+                Cantidad/detalle aprobado: {decision.cantidad_aprobada}
+              </p>
             )}
             {decision.autoridad_solicitante && (
-              <p className="mt-1">Autoridad solicitante: {decision.autoridad_solicitante}</p>
+              <p className="mt-1 text-sm text-text-primary">
+                Autoridad solicitante: {decision.autoridad_solicitante}
+              </p>
             )}
             {decision.comentario && (
-              <p className="mt-1 whitespace-pre-wrap">{decision.comentario}</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">{decision.comentario}</p>
             )}
-          </div>
+          </Card>
         </section>
       )}
 
       {puedeAprobar && solicitud.estado === 'en_evaluacion' && (
         <section>
-          <h2 className="mb-2 font-medium">Decisión de aprobación</h2>
+          <h2 className="mb-2 font-medium text-text-primary">Decisión de aprobación</h2>
           {rshSuperaUmbral && (
-            <p className="mb-3 rounded border border-amber-600/30 bg-amber-600/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-500">
-              Este hogar tiene un tramo RSH de {hogar?.tramo_rsh}%, superior al {UMBRAL_ELEGIBILIDAD_RSH}%
-              permitido para el flujo regular (US-05.04) — la aprobación normal quedará bloqueada. Usa
-              &quot;Aprobar por excepción&quot; más abajo, con un informe social asociado.
-            </p>
+            <CardExcepcion>
+              <div className="flex items-start gap-3">
+                <BadgeExcepcion texto="Excepción RSH" />
+                <p>
+                  Este hogar tiene un tramo RSH de {hogar?.tramo_rsh}%, superior al {UMBRAL_ELEGIBILIDAD_RSH}%
+                  permitido para el flujo regular (US-05.04) — la aprobación normal quedará bloqueada. Usa
+                  &quot;Aprobar por excepción&quot; más abajo, con un informe social asociado.
+                </p>
+              </div>
+            </CardExcepcion>
           )}
           {evaluaciones.length === 0 ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-text-muted">
               No se puede decidir sin al menos una evaluación social registrada.
             </p>
           ) : (
@@ -770,15 +783,13 @@ export default async function DetalleSolicitudPage({
 
       {puedeVerSensible && (
         <section>
-          <h2 className="font-medium">Historial</h2>
+          <h2 className="font-medium text-text-primary">Historial</h2>
           {historial.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              Sin cambios registrados todavía.
-            </p>
+            <p className="mt-2 text-sm text-text-muted">Sin cambios registrados todavía.</p>
           ) : (
             <ul className="mt-2 space-y-2 text-sm">
               {historial.map((cambio) => (
-                <li key={cambio.id} className="text-zinc-600 dark:text-zinc-400">
+                <li key={cambio.id} className="text-text-muted">
                   {new Date(cambio.creado_en).toLocaleString('es-CL')} · {cambio.campo}:{' '}
                   {cambio.valor_anterior ?? '—'} → {cambio.valor_nuevo ?? '—'}
                 </li>

@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { registrarEvaluacion, type EvaluacionFormState } from '@/lib/evaluaciones/actions'
+import { Button } from '@/components/ui/Button'
 
 export function EvaluacionForm({ solicitudId }: { solicitudId: string }) {
   const accion = registrarEvaluacion.bind(null, solicitudId)
@@ -14,7 +15,7 @@ export function EvaluacionForm({ solicitudId }: { solicitudId: string }) {
   return (
     <form action={formAction} className="max-w-lg space-y-3">
       <div className="space-y-1">
-        <label htmlFor="fundamento" className="text-sm font-medium">
+        <label htmlFor="fundamento" className="text-sm font-medium text-text-primary">
           Fundamento *
         </label>
         <textarea
@@ -23,13 +24,13 @@ export function EvaluacionForm({ solicitudId }: { solicitudId: string }) {
           required
           rows={4}
           defaultValue={valores?.fundamento}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-text-primary"
         />
       </div>
 
       <fieldset className="space-y-1">
-        <legend className="text-sm font-medium">Recomendación *</legend>
-        <label className="mr-4 inline-flex items-center gap-1 text-sm">
+        <legend className="text-sm font-medium text-text-primary">Recomendación *</legend>
+        <label className="mr-4 inline-flex items-center gap-1 text-sm text-text-primary">
           <input
             type="radio"
             name="recomendacion"
@@ -39,7 +40,7 @@ export function EvaluacionForm({ solicitudId }: { solicitudId: string }) {
           />
           Aprobar
         </label>
-        <label className="inline-flex items-center gap-1 text-sm">
+        <label className="inline-flex items-center gap-1 text-sm text-text-primary">
           <input
             type="radio"
             name="recomendacion"
@@ -51,18 +52,14 @@ export function EvaluacionForm({ solicitudId }: { solicitudId: string }) {
       </fieldset>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Guardando…' : 'Registrar evaluación'}
-      </button>
+      </Button>
     </form>
   )
 }

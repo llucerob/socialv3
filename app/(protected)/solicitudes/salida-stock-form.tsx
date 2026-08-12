@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { SalidaFormState } from '@/lib/inventario/actions'
 import type { Producto } from '@/lib/inventario/types'
+import { Button } from '@/components/ui/Button'
 
 type SalidaStockFormAction = (
   state: SalidaFormState,
@@ -22,7 +23,7 @@ export function SalidaStockForm({
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
       <div className="space-y-1">
-        <label htmlFor="producto_id" className="text-sm font-medium">
+        <label htmlFor="producto_id" className="text-sm font-medium text-text-primary">
           Producto *
         </label>
         <select
@@ -30,7 +31,7 @@ export function SalidaStockForm({
           name="producto_id"
           required
           defaultValue={valores?.producto_id ?? ''}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         >
           <option value="" disabled>
             Selecciona…
@@ -44,7 +45,7 @@ export function SalidaStockForm({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="cantidad" className="text-sm font-medium">
+        <label htmlFor="cantidad" className="text-sm font-medium text-text-primary">
           Cantidad *
         </label>
         <input
@@ -55,32 +56,28 @@ export function SalidaStockForm({
           step="1"
           required
           defaultValue={valores?.cantidad}
-          className="w-24 rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="w-24 rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="observacion" className="text-sm font-medium">
+        <label htmlFor="observacion" className="text-sm font-medium text-text-primary">
           Observación
         </label>
         <input
           id="observacion"
           name="observacion"
           defaultValue={valores?.observacion}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Registrando…' : 'Registrar salida'}
-      </button>
+      </Button>
 
       {state?.error && (
-        <p role="alert" className="w-full text-sm text-red-600">
+        <p role="alert" className="w-full text-sm text-danger-fg">
           {state.error}
         </p>
       )}

@@ -58,7 +58,7 @@ export default async function EditarSolicitudPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Editar solicitud</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Editar solicitud</h1>
       <SolicitudForm
         action={actualizarConId}
         tiposAyuda={tiposAyuda}

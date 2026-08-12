@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import type { FuncionarioTerreno } from '@/lib/entregas/types'
+import { Button } from '@/components/ui/Button'
 
 type AsignacionFormState = { error?: string; valores: { fecha_programada: string; responsable_id: string } } | undefined
 
@@ -27,7 +28,7 @@ export function EntregaAsignacionForm({
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
       <div className="space-y-1">
-        <label htmlFor="fecha_programada" className="text-sm font-medium">
+        <label htmlFor="fecha_programada" className="text-sm font-medium text-text-primary">
           Fecha programada{fechaRequerida ? ' *' : ''}
         </label>
         <input
@@ -36,19 +37,19 @@ export function EntregaAsignacionForm({
           type="date"
           required={fechaRequerida}
           defaultValue={valores?.fecha_programada}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="responsable_id" className="text-sm font-medium">
+        <label htmlFor="responsable_id" className="text-sm font-medium text-text-primary">
           Responsable
         </label>
         <select
           id="responsable_id"
           name="responsable_id"
           defaultValue={valores?.responsable_id ?? ''}
-          className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         >
           <option value="">Sin asignar</option>
           {funcionarios.map((funcionario) => (
@@ -59,16 +60,12 @@ export function EntregaAsignacionForm({
         </select>
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Guardando…' : submitLabel}
-      </button>
+      </Button>
 
       {state?.error && (
-        <p role="alert" className="w-full text-sm text-red-600">
+        <p role="alert" className="w-full text-sm text-danger-fg">
           {state.error}
         </p>
       )}

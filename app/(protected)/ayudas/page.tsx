@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { getProfile } from '@/lib/auth/dal'
 import { listarTiposAyuda } from '@/lib/ayudas/dal'
+import { ButtonLink } from '@/components/ui/Button'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
 
 export default async function AyudasPage() {
   const profile = await getProfile()
@@ -10,36 +12,32 @@ export default async function AyudasPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Catálogo de ayudas</h1>
+        <h1 className="text-2xl font-semibold text-text-primary">Catálogo de ayudas</h1>
         {puedeGestionar && (
-          <Link
-            href="/ayudas/nuevo"
-            className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background"
-          >
-            Nuevo tipo de ayuda
-          </Link>
+          <ButtonLink href="/ayudas/nuevo">Nuevo tipo de ayuda</ButtonLink>
         )}
       </div>
 
       {tipos.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Sin tipos de ayuda registrados.</p>
+        <p className="text-sm text-text-muted">Sin tipos de ayuda registrados.</p>
       ) : (
-        <ul className="divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {tipos.map((tipoAyuda) => (
             <li key={tipoAyuda.id}>
               <Link
                 href={`/ayudas/${tipoAyuda.id}`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-black/5 dark:hover:bg-white/10"
+                className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-surface-alt"
               >
-                <span>
-                  <span className="font-medium">{tipoAyuda.nombre}</span>
-                  <span className="ml-2 text-sm text-zinc-500 dark:text-zinc-400">
-                    {tipoAyuda.tipo}
-                  </span>
+                <span className="min-w-0">
+                  <span className="font-medium text-text-primary">{tipoAyuda.nombre}</span>
+                  <span className="ml-2 text-sm text-text-muted">{tipoAyuda.tipo}</span>
+                  {tipoAyuda.tiene_tope_monetario && tipoAyuda.tope_monetario !== null && (
+                    <span className="block text-xs text-text-muted">
+                      Tope: ${tipoAyuda.tope_monetario.toLocaleString('es-CL')}
+                    </span>
+                  )}
                 </span>
-                <span className="text-xs uppercase text-zinc-500 dark:text-zinc-400">
-                  {tipoAyuda.estado}
-                </span>
+                <EstadoBadge estado={tipoAyuda.estado} />
               </Link>
             </li>
           ))}

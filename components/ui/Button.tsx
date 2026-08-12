@@ -6,7 +6,11 @@ import Link, { type LinkProps } from 'next/link'
 // `inverse` agregada en el Prompt 2: ninguna variante existente se ve sobre
 // un fondo oscuro (ej. la cabecera bg-brand-800 de la ficha de hogar) — es
 // un patrón que se repetirá en cualquier cabecera de marca, no solo ahí.
-export type VarianteBoton = 'primary' | 'secondary' | 'ghost' | 'inverse'
+// `danger` agregada en la Tanda A: acciones destructivas (rechazar
+// solicitud, anular) usaban `text-red-600` suelto; el sistema no tenía
+// variante para esto — reutiliza los tokens `danger-*` (mismo tono que
+// EstadoBadge para 'rechazada'), nunca el rojo `--red` del escudo.
+export type VarianteBoton = 'primary' | 'secondary' | 'ghost' | 'inverse' | 'danger'
 
 const CLASES_BASE =
   'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50'
@@ -17,6 +21,8 @@ const CLASES_POR_VARIANTE: Record<VarianteBoton, string> = {
     'border border-brand-600 text-brand-600 hover:bg-brand-50 disabled:hover:bg-transparent',
   ghost: 'text-brand-600 hover:bg-brand-50 disabled:hover:bg-transparent',
   inverse: 'border border-white/40 text-white hover:bg-white/10 disabled:hover:bg-transparent',
+  danger:
+    'border border-danger-fg/30 text-danger-fg hover:bg-danger-bg disabled:hover:bg-transparent',
 }
 
 function clasesBoton(variante: VarianteBoton, className: string): string {

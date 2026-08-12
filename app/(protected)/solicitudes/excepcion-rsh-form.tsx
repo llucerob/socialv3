@@ -2,6 +2,8 @@
 
 import { useActionState } from 'react'
 import { aprobarExcepcionRsh, type ExcepcionRshFormState } from '@/lib/decisiones/actions'
+import { Button } from '@/components/ui/Button'
+import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
 
 // US-05.05: "autorizar excepcionalmente... sin ocultar que se trata de un
 // caso excepcional" — "se exige motivo escrito" y "autoridad o unidad que
@@ -17,84 +19,80 @@ export function ExcepcionRshForm({ solicitudId, esReembolso }: { solicitudId: st
   const valores = state?.valores
 
   return (
-    <form action={formAction} className="max-w-md space-y-3 rounded border border-amber-600/30 bg-amber-600/10 p-4">
-      <p className="text-sm font-medium text-amber-700 dark:text-amber-500">
-        Aprobar por excepción (hogar supera el 40% RSH)
-      </p>
+    <CardExcepcion>
+      <form action={formAction} className="max-w-md space-y-3">
+        <BadgeExcepcion texto="Aprobar por excepción — hogar supera el 40% RSH" />
 
-      {esReembolso ? (
+        {esReembolso ? (
+          <div className="space-y-1">
+            <label htmlFor="monto_aprobado_excepcion_rsh" className="text-sm font-medium">
+              Monto aprobado *
+            </label>
+            <input
+              id="monto_aprobado_excepcion_rsh"
+              name="monto_aprobado"
+              type="number"
+              min={0}
+              step="1"
+              required
+              defaultValue={valores?.monto_aprobado}
+              className="w-full rounded-lg border border-exception-border bg-transparent px-3 py-2 text-sm"
+            />
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <label htmlFor="cantidad_aprobada_excepcion_rsh" className="text-sm font-medium">
+              Cantidad o detalle aprobado *
+            </label>
+            <input
+              id="cantidad_aprobada_excepcion_rsh"
+              name="cantidad_aprobada"
+              required
+              placeholder="ej. 2 cajas de mercadería"
+              defaultValue={valores?.cantidad_aprobada}
+              className="w-full rounded-lg border border-exception-border bg-transparent px-3 py-2 text-sm"
+            />
+          </div>
+        )}
+
         <div className="space-y-1">
-          <label htmlFor="monto_aprobado_excepcion_rsh" className="text-sm font-medium">
-            Monto aprobado *
+          <label htmlFor="autoridad_solicitante" className="text-sm font-medium">
+            Autoridad o unidad que solicita la excepción *
           </label>
           <input
-            id="monto_aprobado_excepcion_rsh"
-            name="monto_aprobado"
-            type="number"
-            min={0}
-            step="1"
+            id="autoridad_solicitante"
+            name="autoridad_solicitante"
             required
-            defaultValue={valores?.monto_aprobado}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+            placeholder="ej. Alcaldía"
+            defaultValue={valores?.autoridad_solicitante}
+            className="w-full rounded-lg border border-exception-border bg-transparent px-3 py-2 text-sm"
           />
         </div>
-      ) : (
+
         <div className="space-y-1">
-          <label htmlFor="cantidad_aprobada_excepcion_rsh" className="text-sm font-medium">
-            Cantidad o detalle aprobado *
+          <label htmlFor="motivo_excepcion_rsh" className="text-sm font-medium">
+            Motivo de la excepción *
           </label>
-          <input
-            id="cantidad_aprobada_excepcion_rsh"
-            name="cantidad_aprobada"
+          <textarea
+            id="motivo_excepcion_rsh"
+            name="motivo"
             required
-            placeholder="ej. 2 cajas de mercadería"
-            defaultValue={valores?.cantidad_aprobada}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+            rows={2}
+            defaultValue={valores?.motivo}
+            className="w-full rounded-lg border border-exception-border bg-transparent px-3 py-2 text-sm"
           />
         </div>
-      )}
 
-      <div className="space-y-1">
-        <label htmlFor="autoridad_solicitante" className="text-sm font-medium">
-          Autoridad o unidad que solicita la excepción *
-        </label>
-        <input
-          id="autoridad_solicitante"
-          name="autoridad_solicitante"
-          required
-          placeholder="ej. Alcaldía"
-          defaultValue={valores?.autoridad_solicitante}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-        />
-      </div>
+        {state?.error && (
+          <p role="alert" className="text-sm text-danger-fg">
+            {state.error}
+          </p>
+        )}
 
-      <div className="space-y-1">
-        <label htmlFor="motivo_excepcion_rsh" className="text-sm font-medium">
-          Motivo de la excepción *
-        </label>
-        <textarea
-          id="motivo_excepcion_rsh"
-          name="motivo"
-          required
-          rows={2}
-          defaultValue={valores?.motivo}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-        />
-      </div>
-
-      {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
-          {state.error}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-amber-600/30 px-4 py-2 text-sm font-medium text-amber-700 disabled:opacity-50 dark:text-amber-500"
-      >
-        {pending ? 'Guardando…' : 'Aprobar por excepción'}
-      </button>
-    </form>
+        <Button type="submit" variante="secondary" disabled={pending} className="border-exception-border text-exception-fg hover:bg-exception-bg">
+          {pending ? 'Guardando…' : 'Aprobar por excepción'}
+        </Button>
+      </form>
+    </CardExcepcion>
   )
 }

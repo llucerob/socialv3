@@ -2,6 +2,9 @@
 
 import { useActionState } from 'react'
 import { aprobarSolicitud, type DecisionFormState } from '@/lib/decisiones/actions'
+import { TOPE_ANUAL_POR_GRUPO_FAMILIAR, TOPE_MENSUAL_DIALISIS } from '@/lib/reembolsos/tramos'
+import { Button } from '@/components/ui/Button'
+import { MedidorTope } from '@/components/ui/MedidorTope'
 
 export function AprobarForm({
   solicitudId,
@@ -43,45 +46,58 @@ export function AprobarForm({
   return (
     <form action={formAction} className="max-w-md space-y-3">
       {topeReembolsoGeneral && (
-        <p className="rounded border border-black/10 bg-black/5 px-3 py-2 text-xs text-zinc-600 dark:border-white/20 dark:bg-white/10 dark:text-zinc-400">
-          {topeReembolsoGeneral.bloqueadoPorTramos || topeReembolsoGeneral.remanenteAnual <= 0 ? (
-            <>No se puede aprobar: el hogar ya agotó los reembolsos generales disponibles este año.</>
-          ) : (
-            <>
-              {topeReembolsoGeneral.numeroReembolso}º reembolso del año · tope máximo aprobable: $
-              {topeReembolsoGeneral.topeFinal.toLocaleString('es-CL')} (remanente anual del hogar: $
-              {topeReembolsoGeneral.remanenteAnual.toLocaleString('es-CL')})
-            </>
-          )}
-        </p>
+        <div className="space-y-1">
+          <MedidorTope
+            etiqueta="Tope anual del hogar (compartido: general + excepcionales)"
+            total={TOPE_ANUAL_POR_GRUPO_FAMILIAR}
+            disponible={topeReembolsoGeneral.remanenteAnual}
+          />
+          <p className="text-xs text-text-muted">
+            {topeReembolsoGeneral.bloqueadoPorTramos || topeReembolsoGeneral.remanenteAnual <= 0 ? (
+              <>No se puede aprobar: el hogar ya agotó los reembolsos generales disponibles este año.</>
+            ) : (
+              <>
+                {topeReembolsoGeneral.numeroReembolso}º reembolso del año · tope máximo aprobable para esta
+                solicitud: ${topeReembolsoGeneral.topeFinal.toLocaleString('es-CL')}
+              </>
+            )}
+          </p>
+        </div>
       )}
 
       {topeDialisis && (
-        <p className="rounded border border-black/10 bg-black/5 px-3 py-2 text-xs text-zinc-600 dark:border-white/20 dark:bg-white/10 dark:text-zinc-400">
-          {topeDialisis.saldoDisponible <= 0 ? (
-            <>No se puede aprobar por la vía normal: saldo mensual de diálisis agotado.</>
-          ) : (
-            <>
-              Acumulado mensual de diálisis: ${topeDialisis.acumuladoMensual.toLocaleString('es-CL')} · saldo
-              disponible: ${topeDialisis.saldoDisponible.toLocaleString('es-CL')}
-            </>
+        <div className="space-y-1">
+          <MedidorTope
+            etiqueta="Tope mensual de diálisis (persona beneficiaria)"
+            total={TOPE_MENSUAL_DIALISIS}
+            disponible={topeDialisis.saldoDisponible}
+          />
+          {topeDialisis.saldoDisponible <= 0 && (
+            <p className="text-xs text-text-muted">
+              No se puede aprobar por la vía normal: saldo mensual de diálisis agotado.
+            </p>
           )}
-        </p>
+        </div>
       )}
 
       {remanenteExcepcional && (
-        <p className="rounded border border-black/10 bg-black/5 px-3 py-2 text-xs text-zinc-600 dark:border-white/20 dark:bg-white/10 dark:text-zinc-400">
-          {remanenteExcepcional.remanenteAnual <= 0 ? (
-            <>No se puede aprobar: el hogar ya agotó el remanente anual compartido de reembolsos.</>
-          ) : (
-            <>Remanente anual compartido del hogar: ${remanenteExcepcional.remanenteAnual.toLocaleString('es-CL')}</>
+        <div className="space-y-1">
+          <MedidorTope
+            etiqueta="Tope anual del hogar (compartido: general + excepcionales)"
+            total={TOPE_ANUAL_POR_GRUPO_FAMILIAR}
+            disponible={remanenteExcepcional.remanenteAnual}
+          />
+          {remanenteExcepcional.remanenteAnual <= 0 && (
+            <p className="text-xs text-text-muted">
+              No se puede aprobar: el hogar ya agotó el remanente anual compartido de reembolsos.
+            </p>
           )}
-        </p>
+        </div>
       )}
 
       {esReembolso ? (
         <div className="space-y-1">
-          <label htmlFor="monto_aprobado" className="text-sm font-medium">
+          <label htmlFor="monto_aprobado" className="text-sm font-medium text-text-primary">
             Monto aprobado *
           </label>
           <input
@@ -97,12 +113,12 @@ export function AprobarForm({
             step="1"
             required
             defaultValue={valores?.monto_aprobado}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+            className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
           />
         </div>
       ) : (
         <div className="space-y-1">
-          <label htmlFor="cantidad_aprobada" className="text-sm font-medium">
+          <label htmlFor="cantidad_aprobada" className="text-sm font-medium text-text-primary">
             Cantidad o detalle aprobado *
           </label>
           <input
@@ -111,13 +127,13 @@ export function AprobarForm({
             required
             placeholder="ej. 2 cajas de mercadería"
             defaultValue={valores?.cantidad_aprobada}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+            className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
           />
         </div>
       )}
 
       <div className="space-y-1">
-        <label htmlFor="comentario" className="text-sm font-medium">
+        <label htmlFor="comentario" className="text-sm font-medium text-text-primary">
           Comentario (opcional)
         </label>
         <textarea
@@ -125,23 +141,19 @@ export function AprobarForm({
           name="comentario"
           rows={2}
           defaultValue={valores?.comentario}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         />
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Guardando…' : 'Aprobar solicitud'}
-      </button>
+      </Button>
     </form>
   )
 }

@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { PersonaFormState } from '@/lib/personas/actions'
 import type { Persona } from '@/lib/personas/types'
+import { Button } from '@/components/ui/Button'
 
 type PersonaFormAction = (
   state: PersonaFormState,
@@ -27,11 +28,12 @@ export function PersonaForm({
   // este formulario y borraría lo tipeado. Por eso los valores enviados se
   // devuelven en el state y tienen prioridad sobre defaultValues.
   const valores = state?.valores
+  const claseCampo = 'w-full rounded-lg border border-border bg-transparent px-3 py-2 text-text-primary'
 
   return (
     <form action={formAction} className="max-w-lg space-y-4">
       <div className="space-y-1">
-        <label htmlFor="rut" className="text-sm font-medium">
+        <label htmlFor="rut" className="text-sm font-medium text-text-primary">
           RUT *
         </label>
         <input
@@ -40,13 +42,13 @@ export function PersonaForm({
           required
           placeholder="12345678-9"
           defaultValue={valores?.rut ?? defaultValues?.rut}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label htmlFor="nombres" className="text-sm font-medium">
+          <label htmlFor="nombres" className="text-sm font-medium text-text-primary">
             Nombres *
           </label>
           <input
@@ -54,11 +56,11 @@ export function PersonaForm({
             name="nombres"
             required
             defaultValue={valores?.nombres ?? defaultValues?.nombres}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+            className={claseCampo}
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="apellidos" className="text-sm font-medium">
+          <label htmlFor="apellidos" className="text-sm font-medium text-text-primary">
             Apellidos *
           </label>
           <input
@@ -66,14 +68,14 @@ export function PersonaForm({
             name="apellidos"
             required
             defaultValue={valores?.apellidos ?? defaultValues?.apellidos}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+            className={claseCampo}
           />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label htmlFor="fecha_nacimiento" className="text-sm font-medium">
+          <label htmlFor="fecha_nacimiento" className="text-sm font-medium text-text-primary">
             Fecha de nacimiento *
           </label>
           <input
@@ -82,11 +84,11 @@ export function PersonaForm({
             type="date"
             required
             defaultValue={valores?.fecha_nacimiento ?? defaultValues?.fecha_nacimiento}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+            className={claseCampo}
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="parentesco" className="text-sm font-medium">
+          <label htmlFor="parentesco" className="text-sm font-medium text-text-primary">
             Parentesco *
           </label>
           <input
@@ -95,44 +97,39 @@ export function PersonaForm({
             required
             placeholder="Jefe de hogar, cónyuge, hijo/a…"
             defaultValue={valores?.parentesco ?? defaultValues?.parentesco}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+            className={claseCampo}
           />
         </div>
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
       {state?.warning && (
-        <p role="alert" className="text-sm text-amber-600">
+        <p role="alert" className="text-sm text-warning-fg">
           {state.warning}
         </p>
       )}
 
       <div className="flex gap-2">
-        <button
-          type="submit"
-          name="confirmar_duplicado"
-          value=""
-          disabled={pending}
-          className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-        >
+        <Button type="submit" name="confirmar_duplicado" value="" disabled={pending}>
           {pending ? 'Guardando…' : submitLabel}
-        </button>
+        </Button>
 
         {permiteConfirmarDuplicado && state?.warning && (
-          <button
+          <Button
             type="submit"
             name="confirmar_duplicado"
             value="true"
+            variante="secondary"
             disabled={pending}
-            className="rounded border border-amber-600 px-4 py-2 text-sm font-medium text-amber-600 disabled:opacity-50"
+            className="border-warning-fg text-warning-fg hover:bg-warning-bg"
           >
             Crear de todas formas
-          </button>
+          </Button>
         )}
       </div>
     </form>

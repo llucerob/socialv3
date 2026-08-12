@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { TipoAyudaFormState } from '@/lib/ayudas/actions'
 import type { TipoAyuda } from '@/lib/ayudas/types'
+import { Button } from '@/components/ui/Button'
 
 type TipoAyudaFormAction = (
   state: TipoAyudaFormState,
@@ -28,11 +29,12 @@ export function TipoAyudaForm({
 }) {
   const [state, formAction, pending] = useActionState(action, undefined)
   const valores = state?.valores
+  const claseCampo = 'w-full rounded-lg border border-border bg-transparent px-3 py-2 text-text-primary'
 
   return (
     <form action={formAction} className="max-w-lg space-y-4">
       <div className="space-y-1">
-        <label htmlFor="nombre" className="text-sm font-medium">
+        <label htmlFor="nombre" className="text-sm font-medium text-text-primary">
           Nombre *
         </label>
         <input
@@ -40,12 +42,12 @@ export function TipoAyudaForm({
           name="nombre"
           required
           defaultValue={valores?.nombre ?? defaultValues?.nombre}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="descripcion" className="text-sm font-medium">
+        <label htmlFor="descripcion" className="text-sm font-medium text-text-primary">
           Descripción
         </label>
         <textarea
@@ -53,12 +55,12 @@ export function TipoAyudaForm({
           name="descripcion"
           rows={2}
           defaultValue={valores?.descripcion ?? defaultValues?.descripcion ?? ''}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="tipo" className="text-sm font-medium">
+        <label htmlFor="tipo" className="text-sm font-medium text-text-primary">
           Tipo *
         </label>
         <input
@@ -67,14 +69,14 @@ export function TipoAyudaForm({
           required
           placeholder="material, reembolso…"
           defaultValue={valores?.tipo ?? defaultValues?.tipo}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">Reglas</legend>
+        <legend className="text-sm font-medium text-text-primary">Reglas</legend>
         {REGLAS.map((regla) => (
-          <label key={regla.name} className="flex items-center gap-2 text-sm">
+          <label key={regla.name} className="flex items-center gap-2 text-sm text-text-primary">
             <input
               type="checkbox"
               name={regla.name}
@@ -90,7 +92,7 @@ export function TipoAyudaForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="flex items-center gap-2 text-sm font-medium">
+          <label className="flex items-center gap-2 text-sm font-medium text-text-primary">
             <input
               type="checkbox"
               name="tiene_tope_monetario"
@@ -105,35 +107,31 @@ export function TipoAyudaForm({
             step="1"
             placeholder="Monto del tope, si aplica"
             defaultValue={valores?.tope_monetario ?? defaultValues?.tope_monetario ?? ''}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+            className={claseCampo}
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="periodicidad" className="text-sm font-medium">
+          <label htmlFor="periodicidad" className="text-sm font-medium text-text-primary">
             Periodicidad
           </label>
           <input
             id="periodicidad"
             name="periodicidad"
             defaultValue={valores?.periodicidad ?? defaultValues?.periodicidad ?? ''}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+            className={claseCampo}
           />
         </div>
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Guardando…' : submitLabel}
-      </button>
+      </Button>
     </form>
   )
 }

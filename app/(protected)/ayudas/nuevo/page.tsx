@@ -7,7 +7,7 @@ export default async function NuevoTipoAyudaPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Nuevo tipo de ayuda</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Nuevo tipo de ayuda</h1>
       <TipoAyudaForm action={crearTipoAyuda} submitLabel="Crear tipo de ayuda" />
     </div>
   )

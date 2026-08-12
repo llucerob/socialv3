@@ -21,7 +21,7 @@ export default async function EditarTipoAyudaPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Editar tipo de ayuda</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Editar tipo de ayuda</h1>
       <TipoAyudaForm
         action={actualizarConId}
         defaultValues={tipoAyuda}

@@ -23,7 +23,7 @@ export default async function EditarIntegrantePage({
   return (
     <div className="space-y-8">
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Editar integrante</h1>
+        <h1 className="text-2xl font-semibold text-text-primary">Editar integrante</h1>
         <PersonaForm
           action={actualizarConIds}
           defaultValues={persona}
@@ -32,15 +32,13 @@ export default async function EditarIntegrantePage({
       </div>
 
       <section>
-        <h2 className="font-medium">Historial de cambios sensibles</h2>
+        <h2 className="font-medium text-text-primary">Historial de cambios sensibles</h2>
         {historial.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-            Sin cambios registrados todavía.
-          </p>
+          <p className="mt-2 text-sm text-text-muted">Sin cambios registrados todavía.</p>
         ) : (
           <ul className="mt-2 space-y-2 text-sm">
             {historial.map((cambio) => (
-              <li key={cambio.id} className="text-zinc-600 dark:text-zinc-400">
+              <li key={cambio.id} className="text-text-muted">
                 {new Date(cambio.creado_en).toLocaleString('es-CL')} · {cambio.campo}:{' '}
                 {cambio.valor_anterior ?? '—'} → {cambio.valor_nuevo ?? '—'}
               </li>

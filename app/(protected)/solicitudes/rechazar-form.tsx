@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { rechazarSolicitud, type DecisionFormState } from '@/lib/decisiones/actions'
+import { Button } from '@/components/ui/Button'
 
 export function RechazarForm({ solicitudId }: { solicitudId: string }) {
   const accion = rechazarSolicitud.bind(null, solicitudId)
@@ -12,7 +13,7 @@ export function RechazarForm({ solicitudId }: { solicitudId: string }) {
 
   return (
     <form action={formAction} className="max-w-md space-y-2">
-      <label htmlFor="comentario-rechazo" className="text-sm font-medium">
+      <label htmlFor="comentario-rechazo" className="text-sm font-medium text-text-primary">
         Motivo de rechazo *
       </label>
       <textarea
@@ -21,20 +22,16 @@ export function RechazarForm({ solicitudId }: { solicitudId: string }) {
         required
         rows={2}
         defaultValue={state?.valores?.comentario}
-        className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+        className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
       />
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-red-600/30 px-4 py-2 text-sm font-medium text-red-600 disabled:opacity-50"
-      >
+      <Button type="submit" variante="danger" disabled={pending}>
         {pending ? 'Guardando…' : 'Rechazar solicitud'}
-      </button>
+      </Button>
     </form>
   )
 }
