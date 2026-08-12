@@ -7,7 +7,7 @@ export default async function NuevoProveedorPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Nuevo proveedor</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Nuevo proveedor</h1>
       <ProveedorForm action={crearProveedor} submitLabel="Crear proveedor" />
     </div>
   )

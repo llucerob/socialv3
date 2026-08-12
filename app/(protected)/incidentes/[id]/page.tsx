@@ -4,11 +4,12 @@ import { obtenerIncidente, obtenerHistorialIncidente } from '@/lib/incidentes/da
 import { listarUsuarios } from '@/lib/usuarios/dal'
 import {
   TIPO_INCIDENTE_LABELS,
-  ESTADO_INCIDENTE_LABELS,
   DESTINATARIO_NOTIFICACION_LABELS,
 } from '@/lib/incidentes/types'
 import { CerrarIncidenteForm } from '../cerrar-incidente-form'
 import { NotificarIncidenteForm } from '../notificar-incidente-form'
+import { Card } from '@/components/ui/Card'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
 
 const ROLES_VER_INCIDENTES = ['administrador', 'auditor_consulta'] as const
 const ROLES_GESTION_INCIDENTES = ['administrador'] as const
@@ -29,42 +30,45 @@ export default async function DetalleIncidentePage({ params }: { params: Promise
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">{TIPO_INCIDENTE_LABELS[incidente.tipo]}</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {incidente.fecha_incidente} · estado {ESTADO_INCIDENTE_LABELS[incidente.estado]}
+        <h1 className="text-2xl font-semibold text-text-primary">{TIPO_INCIDENTE_LABELS[incidente.tipo]}</h1>
+        <p className="mt-1 flex items-center gap-2 text-sm text-text-muted">
+          <span>{incidente.fecha_incidente}</span>
+          <EstadoBadge estado={incidente.estado} />
         </p>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2">
         <div>
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Usuario involucrado</h2>
-          <p>{incidente.usuario_involucrado_nombre ?? '—'}</p>
+          <h2 className="text-sm font-medium text-text-muted">Usuario involucrado</h2>
+          <p className="text-text-primary">{incidente.usuario_involucrado_nombre ?? '—'}</p>
         </div>
         <div>
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Responsable de seguimiento</h2>
-          <p>{incidente.responsable_seguimiento_nombre ?? '—'}</p>
+          <h2 className="text-sm font-medium text-text-muted">Responsable de seguimiento</h2>
+          <p className="text-text-primary">{incidente.responsable_seguimiento_nombre ?? '—'}</p>
         </div>
         <div>
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+          <h2 className="text-sm font-medium text-text-muted">
             Cantidad estimada de personas afectadas
           </h2>
-          <p>{incidente.cantidad_personas_afectadas}</p>
+          <p className="text-text-primary">{incidente.cantidad_personas_afectadas}</p>
         </div>
         <div className="sm:col-span-2">
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Datos afectados</h2>
-          <p className="whitespace-pre-wrap">{incidente.datos_afectados}</p>
+          <h2 className="text-sm font-medium text-text-muted">Datos afectados</h2>
+          <p className="whitespace-pre-wrap text-text-primary">{incidente.datos_afectados}</p>
         </div>
         <div className="sm:col-span-2">
-          <h2 className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Medidas correctivas</h2>
-          <p className="whitespace-pre-wrap">{incidente.medidas_correctivas ?? 'Sin medidas correctivas registradas todavía.'}</p>
+          <h2 className="text-sm font-medium text-text-muted">Medidas correctivas</h2>
+          <p className="whitespace-pre-wrap text-text-primary">
+            {incidente.medidas_correctivas ?? 'Sin medidas correctivas registradas todavía.'}
+          </p>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-medium">Notificación</h2>
+        <h2 className="font-medium text-text-primary">Notificación</h2>
         {incidente.notificacion_fecha ? (
-          <div className="rounded border border-black/10 p-3 text-sm dark:border-white/10">
-            <p>
+          <Card>
+            <p className="text-sm text-text-primary">
               Notificado el <span className="font-medium">{incidente.notificacion_fecha}</span> a{' '}
               <span className="font-medium">
                 {incidente.notificacion_destinatario
@@ -72,32 +76,32 @@ export default async function DetalleIncidentePage({ params }: { params: Promise
                   : '—'}
               </span>
             </p>
-            <p className="text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm text-text-muted">
               Responsable: {incidente.notificacion_responsable_nombre ?? 'usuario desconocido'}
             </p>
-          </div>
+          </Card>
         ) : puedeGestionar ? (
           <NotificarIncidenteForm incidenteId={incidente.id} usuarios={usuarios} />
         ) : (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Sin notificación registrada todavía.</p>
+          <p className="text-sm text-text-muted">Sin notificación registrada todavía.</p>
         )}
       </section>
 
       {puedeGestionar && incidente.estado === 'abierto' && (
         <section className="space-y-3">
-          <h2 className="font-medium">Cerrar incidente</h2>
+          <h2 className="font-medium text-text-primary">Cerrar incidente</h2>
           <CerrarIncidenteForm incidenteId={incidente.id} medidasCorrectivas={incidente.medidas_correctivas} />
         </section>
       )}
 
       <section>
-        <h2 className="font-medium">Historial</h2>
+        <h2 className="font-medium text-text-primary">Historial</h2>
         {historial.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Sin cambios registrados todavía.</p>
+          <p className="mt-2 text-sm text-text-muted">Sin cambios registrados todavía.</p>
         ) : (
           <ul className="mt-2 space-y-2 text-sm">
             {historial.map((cambio) => (
-              <li key={cambio.id} className="text-zinc-600 dark:text-zinc-400">
+              <li key={cambio.id} className="text-text-muted">
                 {new Date(cambio.creado_en).toLocaleString('es-CL')} · {cambio.campo}:{' '}
                 {cambio.valor_anterior ?? '—'} → {cambio.valor_nuevo ?? '—'}
               </li>

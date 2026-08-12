@@ -17,7 +17,7 @@ export default async function EditarProveedorPage({ params }: { params: Promise<
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Editar proveedor</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Editar proveedor</h1>
       <ProveedorForm action={actualizarConId} defaultValues={proveedor} submitLabel="Guardar cambios" />
     </div>
   )

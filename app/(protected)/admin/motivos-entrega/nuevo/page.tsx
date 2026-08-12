@@ -7,7 +7,7 @@ export default async function NuevoMotivoEntregaFallidaPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Nuevo motivo de entrega fallida</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Nuevo motivo de entrega fallida</h1>
       <MotivoForm action={crearMotivoEntregaFallida} submitLabel="Crear motivo" />
     </div>
   )

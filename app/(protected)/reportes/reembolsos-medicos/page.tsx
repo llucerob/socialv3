@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { requireRole } from '@/lib/auth/dal'
 import { reporteReembolsosMedicos } from '@/lib/reportes/dal'
 import { TIPO_REEMBOLSO_LABELS, type TipoReembolsoFiltro } from '@/lib/reportes/types'
+import { ButtonLink } from '@/components/ui/Button'
+import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
+import { BadgeExcepcion } from '@/components/ui/ExcepcionRSH'
 
 const ROLES_REPORTE = ['administrador', 'finanzas'] as const
 
@@ -36,93 +39,54 @@ export default async function ReporteReembolsosMedicosPage({
   const queryExport = new URLSearchParams(
     Object.entries({ fecha_desde, fecha_hasta, tipo_reembolso }).filter(([, valor]) => valor)
   ).toString()
+  const claseCampo = 'rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary'
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Reembolsos médicos</h1>
-        <a
+        <h1 className="text-2xl font-semibold text-text-primary">Reembolsos médicos</h1>
+        <ButtonLink
           href={`/api/reportes/reembolsos-medicos/export${queryExport ? `?${queryExport}` : ''}`}
-          className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
+          variante="secondary"
         >
           Exportar CSV
-        </a>
+        </ButtonLink>
       </div>
 
-      <form className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <label htmlFor="fecha_desde" className="text-sm font-medium">
-            Desde
-          </label>
-          <input
-            type="date"
-            id="fecha_desde"
-            name="fecha_desde"
-            defaultValue={fecha_desde}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="fecha_hasta" className="text-sm font-medium">
-            Hasta
-          </label>
-          <input
-            type="date"
-            id="fecha_hasta"
-            name="fecha_hasta"
-            defaultValue={fecha_hasta}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="tipo_reembolso" className="text-sm font-medium">
-            Tipo de reembolso
-          </label>
-          <select
-            id="tipo_reembolso"
-            name="tipo_reembolso"
-            defaultValue={tipo_reembolso}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          >
+      <FiltrosBar hrefLimpiar={hayFiltros ? '/reportes/reembolsos-medicos' : undefined}>
+        <CampoFiltro label="Desde" htmlFor="fecha_desde">
+          <input type="date" id="fecha_desde" name="fecha_desde" defaultValue={fecha_desde} className={claseCampo} />
+        </CampoFiltro>
+        <CampoFiltro label="Hasta" htmlFor="fecha_hasta">
+          <input type="date" id="fecha_hasta" name="fecha_hasta" defaultValue={fecha_hasta} className={claseCampo} />
+        </CampoFiltro>
+        <CampoFiltro label="Tipo de reembolso" htmlFor="tipo_reembolso">
+          <select id="tipo_reembolso" name="tipo_reembolso" defaultValue={tipo_reembolso} className={claseCampo}>
             <option value="">Todos</option>
             <option value="general">{TIPO_REEMBOLSO_LABELS.general}</option>
             <option value="dialisis">{TIPO_REEMBOLSO_LABELS.dialisis}</option>
           </select>
-        </div>
-        <button
-          type="submit"
-          className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-        >
-          Filtrar
-        </button>
-        {hayFiltros && (
-          <Link href="/reportes/reembolsos-medicos" className="text-sm text-zinc-500 underline dark:text-zinc-400">
-            Limpiar filtros
-          </Link>
-        )}
-      </form>
+        </CampoFiltro>
+      </FiltrosBar>
 
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+      <p className="text-sm text-text-muted">
         {filas.length} {filas.length === 1 ? 'reembolso' : 'reembolsos'}
       </p>
 
       {filas.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Sin reembolsos para este filtro.</p>
+        <p className="text-sm text-text-muted">Sin reembolsos para este filtro.</p>
       ) : (
-        <ul className="divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {filas.map((fila) => (
-            <li
-              key={fila.solicitud_id}
-              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
-            >
+            <li key={fila.solicitud_id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
               <div className="min-w-0 flex-1">
-                <span className="text-zinc-500 dark:text-zinc-400">{fila.fecha_solicitud}</span>
+                <span className="text-text-muted">{fila.fecha_solicitud}</span>
                 <span className="mx-2">·</span>
-                <span className="font-medium">{fila.tipo_reembolso_nombre}</span>
+                <span className="font-medium text-text-primary">{fila.tipo_reembolso_nombre}</span>
                 <span className="mx-2">·</span>
-                <span>{fila.direccion}</span>
-                {fila.persona_nombre && <span className="mx-2">· {fila.persona_nombre}</span>}
-                <div className="mt-1 text-zinc-500 dark:text-zinc-400">
+                <span className="text-text-primary">{fila.direccion}</span>
+                {fila.persona_nombre && <span className="mx-2 text-text-primary">· {fila.persona_nombre}</span>}
+                <div className="mt-1 text-text-muted">
                   Solicitado: {fila.monto_solicitado !== null ? `$${fila.monto_solicitado.toLocaleString('es-CL')}` : '—'}
                   {' · '}
                   Aprobado: {fila.monto_aprobado !== null ? `$${fila.monto_aprobado.toLocaleString('es-CL')}` : '—'}
@@ -130,12 +94,12 @@ export default async function ReporteReembolsosMedicosPage({
                   Pagado: {fila.monto_pagado !== null ? `$${fila.monto_pagado.toLocaleString('es-CL')}` : '—'}
                 </div>
                 {fila.es_excepcion && (
-                  <span className="mt-1 inline-block rounded-full border border-amber-600/30 bg-amber-600/10 px-2 py-0.5 text-xs whitespace-nowrap text-amber-700 dark:text-amber-500">
-                    Excepción
+                  <span className="mt-1 inline-block">
+                    <BadgeExcepcion />
                   </span>
                 )}
               </div>
-              <Link href={fila.ruta} className="shrink-0 text-sm underline">
+              <Link href={fila.ruta} className="shrink-0 text-sm text-brand-600 hover:underline">
                 Ver
               </Link>
             </li>

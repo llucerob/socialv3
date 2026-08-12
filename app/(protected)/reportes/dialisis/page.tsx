@@ -1,6 +1,8 @@
-import Link from 'next/link'
 import { requireRole } from '@/lib/auth/dal'
 import { reporteDialisisMensual } from '@/lib/reportes/dal'
+import { ButtonLink } from '@/components/ui/Button'
+import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
+import { BadgeExcepcion } from '@/components/ui/ExcepcionRSH'
 
 const ROLES_REPORTE = ['administrador', 'finanzas', 'auditor_consulta'] as const
 
@@ -30,43 +32,30 @@ export default async function ReporteDialisisPage({ searchParams }: { searchPara
 
   const hayFiltros = anio || mes
   const queryExport = new URLSearchParams(Object.entries({ anio, mes }).filter(([, valor]) => valor)).toString()
+  const claseCampo = 'rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary'
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Diálisis</h1>
-        <a
-          href={`/api/reportes/dialisis/export${queryExport ? `?${queryExport}` : ''}`}
-          className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-        >
+        <h1 className="text-2xl font-semibold text-text-primary">Diálisis</h1>
+        <ButtonLink href={`/api/reportes/dialisis/export${queryExport ? `?${queryExport}` : ''}`} variante="secondary">
           Exportar CSV
-        </a>
+        </ButtonLink>
       </div>
 
-      <form className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <label htmlFor="anio" className="text-sm font-medium">
-            Año
-          </label>
+      <FiltrosBar hrefLimpiar={hayFiltros ? '/reportes/dialisis' : undefined}>
+        <CampoFiltro label="Año" htmlFor="anio">
           <input
             type="number"
             id="anio"
             name="anio"
             defaultValue={anio}
             placeholder="Todos"
-            className="w-24 rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+            className={`w-24 ${claseCampo}`}
           />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="mes" className="text-sm font-medium">
-            Mes
-          </label>
-          <select
-            id="mes"
-            name="mes"
-            defaultValue={mes}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          >
+        </CampoFiltro>
+        <CampoFiltro label="Mes" htmlFor="mes">
+          <select id="mes" name="mes" defaultValue={mes} className={claseCampo}>
             <option value="">Todos</option>
             {MESES.map((nombre, index) => (
               <option key={nombre} value={index + 1}>
@@ -74,43 +63,32 @@ export default async function ReporteDialisisPage({ searchParams }: { searchPara
               </option>
             ))}
           </select>
-        </div>
-        <button
-          type="submit"
-          className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-        >
-          Filtrar
-        </button>
-        {hayFiltros && (
-          <Link href="/reportes/dialisis" className="text-sm text-zinc-500 underline dark:text-zinc-400">
-            Limpiar filtros
-          </Link>
-        )}
-      </form>
+        </CampoFiltro>
+      </FiltrosBar>
 
       {filas.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Sin reembolsos de diálisis para este filtro.</p>
+        <p className="text-sm text-text-muted">Sin reembolsos de diálisis para este filtro.</p>
       ) : (
-        <ul className="divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {filas.map((fila) => (
             <li
               key={`${fila.persona_id}-${fila.anio}-${fila.mes}`}
               className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
             >
               <div className="min-w-0 flex-1">
-                <span className="font-medium">{fila.persona_nombre}</span>
+                <span className="font-medium text-text-primary">{fila.persona_nombre}</span>
                 <span className="mx-2">·</span>
-                <span className="text-zinc-500 dark:text-zinc-400">
+                <span className="text-text-muted">
                   {MESES[fila.mes - 1]} {fila.anio}
                 </span>
-                <div className="mt-1 text-zinc-500 dark:text-zinc-400">
+                <div className="mt-1 text-text-muted">
                   Acumulado: ${fila.monto_acumulado.toLocaleString('es-CL')}
                   {' · '}
                   Saldo disponible: ${fila.saldo_disponible.toLocaleString('es-CL')}
                 </div>
                 {fila.tiene_excepcion && (
-                  <span className="mt-1 inline-block rounded-full border border-amber-600/30 bg-amber-600/10 px-2 py-0.5 text-xs whitespace-nowrap text-amber-700 dark:text-amber-500">
-                    Excepción
+                  <span className="mt-1 inline-block">
+                    <BadgeExcepcion />
                   </span>
                 )}
               </div>

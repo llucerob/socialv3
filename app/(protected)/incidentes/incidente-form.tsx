@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import type { IncidenteFormState } from '@/lib/incidentes/actions'
 import { TIPOS_INCIDENTE, TIPO_INCIDENTE_LABELS } from '@/lib/incidentes/types'
 import type { Usuario } from '@/lib/usuarios/types'
+import { Button } from '@/components/ui/Button'
 
 type IncidenteFormAction = (state: IncidenteFormState, formData: FormData) => Promise<IncidenteFormState>
 
@@ -14,11 +15,12 @@ type IncidenteFormAction = (state: IncidenteFormState, formData: FormData) => Pr
 export function IncidenteForm({ action, usuarios }: { action: IncidenteFormAction; usuarios: Usuario[] }) {
   const [state, formAction, pending] = useActionState(action, undefined)
   const valores = state?.valores
+  const claseCampo = 'w-full rounded-lg border border-border bg-transparent px-3 py-2 text-text-primary'
 
   return (
     <form action={formAction} className="max-w-lg space-y-4">
       <div className="space-y-1">
-        <label htmlFor="fecha_incidente" className="text-sm font-medium">
+        <label htmlFor="fecha_incidente" className="text-sm font-medium text-text-primary">
           Fecha del incidente *
         </label>
         <input
@@ -27,21 +29,15 @@ export function IncidenteForm({ action, usuarios }: { action: IncidenteFormActio
           name="fecha_incidente"
           required
           defaultValue={valores?.fecha_incidente ?? new Date().toISOString().slice(0, 10)}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="tipo" className="text-sm font-medium">
+        <label htmlFor="tipo" className="text-sm font-medium text-text-primary">
           Tipo de incidente *
         </label>
-        <select
-          id="tipo"
-          name="tipo"
-          required
-          defaultValue={valores?.tipo ?? ''}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
-        >
+        <select id="tipo" name="tipo" required defaultValue={valores?.tipo ?? ''} className={claseCampo}>
           <option value="" disabled>
             Selecciona…
           </option>
@@ -54,14 +50,14 @@ export function IncidenteForm({ action, usuarios }: { action: IncidenteFormActio
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="usuario_involucrado_id" className="text-sm font-medium">
+        <label htmlFor="usuario_involucrado_id" className="text-sm font-medium text-text-primary">
           Usuario involucrado (opcional)
         </label>
         <select
           id="usuario_involucrado_id"
           name="usuario_involucrado_id"
           defaultValue={valores?.usuario_involucrado_id ?? ''}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         >
           <option value="">Sin usuario específico</option>
           {usuarios.map((usuario) => (
@@ -73,7 +69,7 @@ export function IncidenteForm({ action, usuarios }: { action: IncidenteFormActio
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="datos_afectados" className="text-sm font-medium">
+        <label htmlFor="datos_afectados" className="text-sm font-medium text-text-primary">
           Datos afectados *
         </label>
         <textarea
@@ -82,12 +78,12 @@ export function IncidenteForm({ action, usuarios }: { action: IncidenteFormActio
           required
           rows={3}
           defaultValue={valores?.datos_afectados}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="cantidad_personas_afectadas" className="text-sm font-medium">
+        <label htmlFor="cantidad_personas_afectadas" className="text-sm font-medium text-text-primary">
           Cantidad estimada de personas afectadas *
         </label>
         <input
@@ -98,12 +94,12 @@ export function IncidenteForm({ action, usuarios }: { action: IncidenteFormActio
           step="1"
           required
           defaultValue={valores?.cantidad_personas_afectadas}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="responsable_seguimiento_id" className="text-sm font-medium">
+        <label htmlFor="responsable_seguimiento_id" className="text-sm font-medium text-text-primary">
           Responsable de seguimiento *
         </label>
         <select
@@ -111,7 +107,7 @@ export function IncidenteForm({ action, usuarios }: { action: IncidenteFormActio
           name="responsable_seguimiento_id"
           required
           defaultValue={valores?.responsable_seguimiento_id ?? ''}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         >
           <option value="" disabled>
             Selecciona…
@@ -125,7 +121,7 @@ export function IncidenteForm({ action, usuarios }: { action: IncidenteFormActio
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="medidas_correctivas" className="text-sm font-medium">
+        <label htmlFor="medidas_correctivas" className="text-sm font-medium text-text-primary">
           Medidas correctivas (opcional)
         </label>
         <textarea
@@ -133,26 +129,22 @@ export function IncidenteForm({ action, usuarios }: { action: IncidenteFormActio
           name="medidas_correctivas"
           rows={3}
           defaultValue={valores?.medidas_correctivas}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs text-text-muted">
           Puede completarse ahora o más adelante — se exige antes de poder cerrar el incidente.
         </p>
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Guardando…' : 'Registrar incidente'}
-      </button>
+      </Button>
     </form>
   )
 }

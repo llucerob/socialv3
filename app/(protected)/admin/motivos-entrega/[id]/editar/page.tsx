@@ -21,7 +21,7 @@ export default async function EditarMotivoEntregaFallidaPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Editar motivo de entrega fallida</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Editar motivo de entrega fallida</h1>
       <MotivoForm action={actualizarConId} defaultValues={motivo} submitLabel="Guardar cambios" />
     </div>
   )

@@ -61,20 +61,20 @@ export default async function ReportesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Reportes</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Reportes</h1>
 
       {reportes.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">No hay reportes disponibles para tu rol.</p>
+        <p className="text-sm text-text-muted">No hay reportes disponibles para tu rol.</p>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2">
           {reportes.map((reporte) => (
             <li key={reporte.href}>
               <Link
                 href={reporte.href}
-                className="block rounded border border-black/10 p-4 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
+                className="block rounded-xl border border-border bg-surface p-4 hover:bg-surface-alt"
               >
-                <p className="font-medium">{reporte.titulo}</p>
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{reporte.descripcion}</p>
+                <p className="font-medium text-text-primary">{reporte.titulo}</p>
+                <p className="mt-1 text-sm text-text-muted">{reporte.descripcion}</p>
               </Link>
             </li>
           ))}

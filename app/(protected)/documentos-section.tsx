@@ -6,6 +6,7 @@ import {
   ESTADO_RETENCION_DOCUMENTO_LABELS,
 } from '@/lib/documentos/types'
 import type { DocumentoConDetalle, TipoDocumento } from '@/lib/documentos/types'
+import { Button } from '@/components/ui/Button'
 
 function formatearTamano(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -16,13 +17,13 @@ function formatearTamano(bytes: number): string {
 function badgeValidacion(estado: DocumentoConDetalle['estado_validacion']) {
   const estilos =
     estado === 'valido'
-      ? 'border-green-600/30 bg-green-600/10 text-green-700 dark:text-green-500'
+      ? 'bg-success-bg text-success-fg'
       : estado === 'observado'
-        ? 'border-amber-600/30 bg-amber-600/10 text-amber-700 dark:text-amber-500'
-        : 'border-black/10 bg-black/5 text-zinc-500 dark:border-white/20 dark:bg-white/10 dark:text-zinc-400'
+        ? 'bg-warning-bg text-warning-fg'
+        : 'bg-neutral-bg text-neutral-fg'
 
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs whitespace-nowrap ${estilos}`}>
+    <span className={`rounded-full px-2 py-0.5 text-xs whitespace-nowrap ${estilos}`}>
       {ESTADO_VALIDACION_DOCUMENTO_LABELS[estado]}
     </span>
   )
@@ -34,13 +35,13 @@ function badgeValidacion(estado: DocumentoConDetalle['estado_validacion']) {
 function badgeRetencion(estado: DocumentoConDetalle['estado_retencion']) {
   const estilos =
     estado === 'bloqueado'
-      ? 'border-red-600/30 bg-red-600/10 text-red-700 dark:text-red-500'
+      ? 'bg-danger-bg text-danger-fg'
       : estado === 'vencido' || estado === 'eliminable'
-        ? 'border-amber-600/30 bg-amber-600/10 text-amber-700 dark:text-amber-500'
-        : 'border-black/10 bg-black/5 text-zinc-500 dark:border-white/20 dark:bg-white/10 dark:text-zinc-400'
+        ? 'bg-warning-bg text-warning-fg'
+        : 'bg-neutral-bg text-neutral-fg'
 
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs whitespace-nowrap ${estilos}`}>
+    <span className={`rounded-full px-2 py-0.5 text-xs whitespace-nowrap ${estilos}`}>
       {ESTADO_RETENCION_DOCUMENTO_LABELS[estado]}
     </span>
   )
@@ -95,14 +96,14 @@ export function DocumentosSection({
           Object.entries(preservarParams).map(([nombre, valor]) => (
             <input key={nombre} type="hidden" name={nombre} value={valor} />
           ))}
-        <label htmlFor="tipo_documento_filtro" className="text-zinc-500 dark:text-zinc-400">
+        <label htmlFor="tipo_documento_filtro" className="text-text-muted">
           Filtrar por tipo
         </label>
         <select
           id="tipo_documento_filtro"
           name="tipo_documento"
           defaultValue={tipoFiltro ?? ''}
-          className="rounded border border-black/10 bg-transparent px-2 py-1 dark:border-white/20"
+          className="rounded-lg border border-border bg-transparent px-2 py-1 text-text-primary"
         >
           <option value="">Todos</option>
           {TIPOS_DOCUMENTO.map((tipo) => (
@@ -111,25 +112,22 @@ export function DocumentosSection({
             </option>
           ))}
         </select>
-        <button
-          type="submit"
-          className="rounded border border-black/10 px-2 py-1 dark:border-white/20"
-        >
+        <Button type="submit" variante="secondary" className="px-2 py-1">
           Filtrar
-        </button>
+        </Button>
         {tipoFiltro && (
-          <a href={baseHref} className="text-zinc-500 underline dark:text-zinc-400">
+          <a href={baseHref} className="text-brand-600 underline">
             Ver todos
           </a>
         )}
       </form>
 
       {documentosFiltrados.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-text-muted">
           {tipoFiltro ? 'Sin documentos de este tipo.' : 'Sin documentos subidos todavía.'}
         </p>
       ) : (
-        <ul className="divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {documentosFiltrados.map((documento) => {
             const validarConId = accionValidar?.bind(null, documento.id)
             const retencionConId = accionRetencion?.bind(null, documento.id)
@@ -140,13 +138,13 @@ export function DocumentosSection({
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     {documento.url ? (
-                      <a href={documento.url} className="font-medium underline">
+                      <a href={documento.url} className="font-medium text-brand-600 underline">
                         {documento.nombre_archivo}
                       </a>
                     ) : (
-                      <span className="font-medium">{documento.nombre_archivo}</span>
+                      <span className="font-medium text-text-primary">{documento.nombre_archivo}</span>
                     )}
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="text-xs text-text-muted">
                       {TIPO_DOCUMENTO_LABELS[documento.tipo_documento]} ·{' '}
                       {formatearTamano(documento.tamano_bytes)} · subido por{' '}
                       {documento.subido_por_nombre ?? 'usuario desconocido'}
@@ -155,14 +153,14 @@ export function DocumentosSection({
                   <div className="flex shrink-0 items-center gap-2">
                     {badgeValidacion(documento.estado_validacion)}
                     {badgeRetencion(documento.estado_retencion)}
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="text-xs text-text-muted">
                       {new Date(documento.created_at).toLocaleDateString('es-CL')}
                     </span>
                   </div>
                 </div>
 
                 {documento.comentario_validacion && (
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                  <p className="text-xs text-text-muted">
                     Comentario de validación: {documento.comentario_validacion}
                     {documento.validado_por_nombre && ` (${documento.validado_por_nombre})`}
                   </p>
@@ -175,13 +173,13 @@ export function DocumentosSection({
                       name="comentario"
                       placeholder="Comentario (opcional)"
                       defaultValue={documento.comentario_validacion ?? ''}
-                      className="min-w-0 flex-1 rounded border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/20"
+                      className="min-w-0 flex-1 rounded-lg border border-border bg-transparent px-2 py-1 text-xs text-text-primary"
                     />
                     <button
                       type="submit"
                       name="estado_validacion"
                       value="valido"
-                      className="rounded border border-green-600/30 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-500"
+                      className="rounded-lg border border-success-fg/30 px-2 py-1 text-xs font-medium text-success-fg hover:bg-success-bg"
                     >
                       Marcar válido
                     </button>
@@ -189,7 +187,7 @@ export function DocumentosSection({
                       type="submit"
                       name="estado_validacion"
                       value="observado"
-                      className="rounded border border-amber-600/30 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-500"
+                      className="rounded-lg border border-warning-fg/30 px-2 py-1 text-xs font-medium text-warning-fg hover:bg-warning-bg"
                     >
                       Marcar observado
                     </button>
@@ -197,12 +195,12 @@ export function DocumentosSection({
                 )}
 
                 {puedeGestionarRetencion && retencionConId && eliminarConId && (
-                  <div className="flex flex-wrap items-center gap-2 border-t border-black/10 pt-2 dark:border-white/10">
+                  <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
                     <form action={retencionConId} className="flex flex-wrap items-center gap-2">
                       <select
                         name="estado_retencion"
                         defaultValue={documento.estado_retencion}
-                        className="rounded border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/20"
+                        className="rounded-lg border border-border bg-transparent px-2 py-1 text-xs text-text-primary"
                       >
                         {ESTADOS_RETENCION_DOCUMENTO.map((estado) => (
                           <option key={estado} value={estado}>
@@ -212,7 +210,7 @@ export function DocumentosSection({
                       </select>
                       <button
                         type="submit"
-                        className="rounded border border-black/10 px-2 py-1 text-xs font-medium dark:border-white/20"
+                        className="rounded-lg border border-border px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-alt"
                       >
                         Actualizar conservación
                       </button>
@@ -220,7 +218,7 @@ export function DocumentosSection({
                     <form action={eliminarConId}>
                       <button
                         type="submit"
-                        className="rounded border border-red-600/30 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-500"
+                        className="rounded-lg border border-danger-fg/30 px-2 py-1 text-xs font-medium text-danger-fg hover:bg-danger-bg"
                       >
                         Eliminar documento
                       </button>

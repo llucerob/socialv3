@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { EntradaFormState } from '@/lib/inventario/actions'
 import type { CompraConNombres } from '@/lib/compras/types'
+import { Button } from '@/components/ui/Button'
 
 type EntradaStockFormAction = (
   state: EntradaFormState,
@@ -22,11 +23,12 @@ export function EntradaStockForm({
 }) {
   const [state, formAction, pending] = useActionState(action, undefined)
   const valores = state?.valores
+  const claseCampo = 'w-full rounded-lg border border-border bg-transparent px-3 py-2 text-text-primary'
 
   return (
     <form action={formAction} className="max-w-md space-y-4">
       <div className="space-y-1">
-        <label htmlFor="cantidad" className="text-sm font-medium">
+        <label htmlFor="cantidad" className="text-sm font-medium text-text-primary">
           Cantidad ingresada *
         </label>
         <input
@@ -37,21 +39,16 @@ export function EntradaStockForm({
           step="1"
           required
           defaultValue={valores?.cantidad}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       {compras.length > 0 && (
         <div className="space-y-1">
-          <label htmlFor="compra_id" className="text-sm font-medium">
+          <label htmlFor="compra_id" className="text-sm font-medium text-text-primary">
             Compra asociada
           </label>
-          <select
-            id="compra_id"
-            name="compra_id"
-            defaultValue={valores?.compra_id ?? ''}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
-          >
+          <select id="compra_id" name="compra_id" defaultValue={valores?.compra_id ?? ''} className={claseCampo}>
             <option value="">Ninguna (ingreso manual)</option>
             {compras.map((compra) => (
               <option key={compra.id} value={compra.id}>
@@ -63,31 +60,21 @@ export function EntradaStockForm({
       )}
 
       <div className="space-y-1">
-        <label htmlFor="observacion" className="text-sm font-medium">
+        <label htmlFor="observacion" className="text-sm font-medium text-text-primary">
           Observación
         </label>
-        <textarea
-          id="observacion"
-          name="observacion"
-          rows={2}
-          defaultValue={valores?.observacion}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
-        />
+        <textarea id="observacion" name="observacion" rows={2} defaultValue={valores?.observacion} className={claseCampo} />
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Guardando…' : 'Registrar entrada'}
-      </button>
+      </Button>
     </form>
   )
 }

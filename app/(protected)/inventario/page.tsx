@@ -1,6 +1,6 @@
-import Link from 'next/link'
 import { requireRole } from '@/lib/auth/dal'
 import { listarProductos } from '@/lib/inventario/dal'
+import { ButtonLink } from '@/components/ui/Button'
 
 const ROLES_INVENTARIO = ['administrador', 'bodega_logistica'] as const
 
@@ -14,61 +14,47 @@ export default async function InventarioPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Inventario</h1>
+        <h1 className="text-2xl font-semibold text-text-primary">Inventario</h1>
         <div className="flex items-center gap-2">
-          <Link
-            href="/inventario/proveedores"
-            className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-          >
+          <ButtonLink href="/inventario/proveedores" variante="secondary">
             Proveedores
-          </Link>
-          <Link
-            href="/inventario/compras"
-            className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-          >
+          </ButtonLink>
+          <ButtonLink href="/inventario/compras" variante="secondary">
             Compras
-          </Link>
-          <Link
-            href="/inventario/nuevo"
-            className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background"
-          >
-            Nuevo producto
-          </Link>
+          </ButtonLink>
+          <ButtonLink href="/inventario/nuevo">Nuevo producto</ButtonLink>
         </div>
       </div>
 
       {productos.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Sin productos registrados.</p>
+        <p className="text-sm text-text-muted">Sin productos registrados.</p>
       ) : (
-        <ul className="divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {productos.map((producto) => {
             const bajoStock = producto.stock_actual <= producto.stock_minimo
             return (
               <li key={producto.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <div>
-                  <p className="font-medium">{producto.nombre}</p>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  <p className="font-medium text-text-primary">{producto.nombre}</p>
+                  <p className="text-sm text-text-muted">
                     {producto.categoria} · {producto.unidad_medida}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right text-sm">
-                    <p className={bajoStock ? 'font-medium text-red-600' : 'font-medium'}>
+                    <p className={bajoStock ? 'font-medium text-danger-fg' : 'font-medium text-text-primary'}>
                       {producto.stock_actual} {producto.unidad_medida}
                     </p>
-                    <p className="text-zinc-500 dark:text-zinc-400">mínimo {producto.stock_minimo}</p>
+                    <p className="text-text-muted">mínimo {producto.stock_minimo}</p>
                   </div>
                   {bajoStock && (
-                    <span className="rounded bg-red-600/10 px-2 py-1 text-xs font-medium text-red-600">
+                    <span className="rounded-full bg-danger-bg px-2.5 py-0.5 text-xs font-medium text-danger-fg">
                       Stock bajo
                     </span>
                   )}
-                  <Link
-                    href={`/inventario/${producto.id}/entrada`}
-                    className="rounded border border-black/10 px-3 py-1.5 text-sm font-medium dark:border-white/20"
-                  >
+                  <ButtonLink href={`/inventario/${producto.id}/entrada`} variante="secondary" className="px-3 py-1.5 text-sm">
                     Registrar entrada
-                  </Link>
+                  </ButtonLink>
                 </div>
               </li>
             )

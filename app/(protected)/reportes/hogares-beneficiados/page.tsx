@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { requireRole } from '@/lib/auth/dal'
 import { reporteHogaresBeneficiados, listarSectoresDisponibles } from '@/lib/reportes/dal'
+import { ButtonLink } from '@/components/ui/Button'
+import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
 
 const ROLES_REPORTE = ['administrador', 'auditor_consulta'] as const
 
@@ -36,54 +38,29 @@ export default async function ReporteHogaresBeneficiadosPage({
   const queryExport = new URLSearchParams(
     Object.entries({ fecha_desde, fecha_hasta, sector }).filter(([, valor]) => valor)
   ).toString()
+  const claseCampo = 'rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary'
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Hogares beneficiados</h1>
-        <a
+        <h1 className="text-2xl font-semibold text-text-primary">Hogares beneficiados</h1>
+        <ButtonLink
           href={`/api/reportes/hogares-beneficiados/export${queryExport ? `?${queryExport}` : ''}`}
-          className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
+          variante="secondary"
         >
           Exportar CSV
-        </a>
+        </ButtonLink>
       </div>
 
-      <form className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <label htmlFor="fecha_desde" className="text-sm font-medium">
-            Desde
-          </label>
-          <input
-            type="date"
-            id="fecha_desde"
-            name="fecha_desde"
-            defaultValue={fecha_desde}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="fecha_hasta" className="text-sm font-medium">
-            Hasta
-          </label>
-          <input
-            type="date"
-            id="fecha_hasta"
-            name="fecha_hasta"
-            defaultValue={fecha_hasta}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="sector" className="text-sm font-medium">
-            Sector
-          </label>
-          <select
-            id="sector"
-            name="sector"
-            defaultValue={sector}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          >
+      <FiltrosBar hrefLimpiar={hayFiltros ? '/reportes/hogares-beneficiados' : undefined}>
+        <CampoFiltro label="Desde" htmlFor="fecha_desde">
+          <input type="date" id="fecha_desde" name="fecha_desde" defaultValue={fecha_desde} className={claseCampo} />
+        </CampoFiltro>
+        <CampoFiltro label="Hasta" htmlFor="fecha_hasta">
+          <input type="date" id="fecha_hasta" name="fecha_hasta" defaultValue={fecha_hasta} className={claseCampo} />
+        </CampoFiltro>
+        <CampoFiltro label="Sector" htmlFor="sector">
+          <select id="sector" name="sector" defaultValue={sector} className={claseCampo}>
             <option value="">Todos</option>
             {sectores.map((s) => (
               <option key={s} value={s}>
@@ -91,48 +68,35 @@ export default async function ReporteHogaresBeneficiadosPage({
               </option>
             ))}
           </select>
-        </div>
-        <button
-          type="submit"
-          className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-        >
-          Filtrar
-        </button>
-        {hayFiltros && (
-          <Link href="/reportes/hogares-beneficiados" className="text-sm text-zinc-500 underline dark:text-zinc-400">
-            Limpiar filtros
-          </Link>
-        )}
-      </form>
+        </CampoFiltro>
+      </FiltrosBar>
 
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+      <p className="text-sm text-text-muted">
         {filas.length} {filas.length === 1 ? 'hogar beneficiado' : 'hogares beneficiados'}
       </p>
 
       {filas.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Sin hogares beneficiados para este filtro.</p>
+        <p className="text-sm text-text-muted">Sin hogares beneficiados para este filtro.</p>
       ) : (
-        <ul className="divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {filas.map((fila) => (
             <li
               key={fila.grupo_familiar_id}
               className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
             >
               <div className="min-w-0 flex-1">
-                <span className="font-medium">{fila.direccion}</span>
+                <span className="font-medium text-text-primary">{fila.direccion}</span>
                 <span className="mx-2">·</span>
-                <span>{fila.sector}</span>
+                <span className="text-text-primary">{fila.sector}</span>
                 <span className="mx-2">·</span>
-                <span>
+                <span className="text-text-primary">
                   {fila.cantidad_ayudas} {fila.cantidad_ayudas === 1 ? 'ayuda' : 'ayudas'}
                 </span>
                 {fila.fecha_ultima_ayuda && (
-                  <span className="mx-2 text-zinc-500 dark:text-zinc-400">
-                    · última: {fila.fecha_ultima_ayuda}
-                  </span>
+                  <span className="mx-2 text-text-muted">· última: {fila.fecha_ultima_ayuda}</span>
                 )}
               </div>
-              <Link href={fila.ruta} className="shrink-0 text-sm underline">
+              <Link href={fila.ruta} className="shrink-0 text-sm text-brand-600 hover:underline">
                 Ver hogar
               </Link>
             </li>

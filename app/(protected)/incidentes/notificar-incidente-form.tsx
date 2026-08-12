@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { registrarNotificacionIncidente, type NotificarIncidenteState } from '@/lib/incidentes/actions'
 import { DESTINATARIO_NOTIFICACION_LABELS } from '@/lib/incidentes/types'
 import type { Usuario } from '@/lib/usuarios/types'
+import { Button } from '@/components/ui/Button'
 
 // US-26.04: "campo de fecha de notificación · campo de destinatario
 // (Agencia / titulares / ambos) · campo de responsable · no automatiza el
@@ -12,11 +13,12 @@ export function NotificarIncidenteForm({ incidenteId, usuarios }: { incidenteId:
   const accion = registrarNotificacionIncidente.bind(null, incidenteId)
   const [state, formAction, pending] = useActionState<NotificarIncidenteState, FormData>(accion, undefined)
   const valores = state?.valores
+  const claseCampo = 'w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary'
 
   return (
     <form action={formAction} className="max-w-md space-y-3">
       <div className="space-y-1">
-        <label htmlFor="notificacion_fecha" className="text-sm font-medium">
+        <label htmlFor="notificacion_fecha" className="text-sm font-medium text-text-primary">
           Fecha de notificación *
         </label>
         <input
@@ -25,12 +27,12 @@ export function NotificarIncidenteForm({ incidenteId, usuarios }: { incidenteId:
           name="notificacion_fecha"
           required
           defaultValue={valores?.notificacion_fecha}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="notificacion_destinatario" className="text-sm font-medium">
+        <label htmlFor="notificacion_destinatario" className="text-sm font-medium text-text-primary">
           Destinatario *
         </label>
         <select
@@ -38,7 +40,7 @@ export function NotificarIncidenteForm({ incidenteId, usuarios }: { incidenteId:
           name="notificacion_destinatario"
           required
           defaultValue={valores?.notificacion_destinatario ?? ''}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className={claseCampo}
         >
           <option value="" disabled>
             Selecciona…
@@ -52,7 +54,7 @@ export function NotificarIncidenteForm({ incidenteId, usuarios }: { incidenteId:
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="notificacion_responsable_id" className="text-sm font-medium">
+        <label htmlFor="notificacion_responsable_id" className="text-sm font-medium text-text-primary">
           Responsable de la notificación *
         </label>
         <select
@@ -60,7 +62,7 @@ export function NotificarIncidenteForm({ incidenteId, usuarios }: { incidenteId:
           name="notificacion_responsable_id"
           required
           defaultValue={valores?.notificacion_responsable_id ?? ''}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
+          className={claseCampo}
         >
           <option value="" disabled>
             Selecciona…
@@ -74,18 +76,14 @@ export function NotificarIncidenteForm({ incidenteId, usuarios }: { incidenteId:
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded border border-black/10 px-4 py-2 text-sm font-medium disabled:opacity-50 dark:border-white/20"
-      >
+      <Button type="submit" variante="secondary" disabled={pending}>
         {pending ? 'Guardando…' : 'Registrar notificación'}
-      </button>
+      </Button>
     </form>
   )
 }

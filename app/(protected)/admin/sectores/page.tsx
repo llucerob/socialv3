@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { getProfile } from '@/lib/auth/dal'
 import { listarSectores } from '@/lib/sectores/dal'
+import { ButtonLink } from '@/components/ui/Button'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
 
 // US-19.02: "se pueden crear/editar/desactivar sectores".
 export default async function SectoresPage() {
@@ -11,29 +13,22 @@ export default async function SectoresPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Sectores</h1>
-        {puedeGestionar && (
-          <Link
-            href="/admin/sectores/nuevo"
-            className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background"
-          >
-            Nuevo sector
-          </Link>
-        )}
+        <h1 className="text-2xl font-semibold text-text-primary">Sectores</h1>
+        {puedeGestionar && <ButtonLink href="/admin/sectores/nuevo">Nuevo sector</ButtonLink>}
       </div>
 
       {sectores.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Sin sectores registrados.</p>
+        <p className="text-sm text-text-muted">Sin sectores registrados.</p>
       ) : (
-        <ul className="divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {sectores.map((sector) => (
             <li key={sector.id}>
               <Link
                 href={`/admin/sectores/${sector.id}`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-black/5 dark:hover:bg-white/10"
+                className="flex items-center justify-between px-4 py-3 hover:bg-surface-alt"
               >
-                <span className="font-medium">{sector.nombre}</span>
-                <span className="text-xs uppercase text-zinc-500 dark:text-zinc-400">{sector.estado}</span>
+                <span className="font-medium text-text-primary">{sector.nombre}</span>
+                <EstadoBadge estado={sector.estado} />
               </Link>
             </li>
           ))}

@@ -4,10 +4,11 @@ import { useActionState } from 'react'
 import type { CompraFormState } from '@/lib/compras/actions'
 import type { Producto } from '@/lib/inventario/types'
 import type { Proveedor } from '@/lib/proveedores/types'
+import { Button } from '@/components/ui/Button'
 
 type CompraFormAction = (state: CompraFormState, formData: FormData) => Promise<CompraFormState>
 
-const INPUT_CLASSNAME = 'w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20'
+const INPUT_CLASSNAME = 'w-full rounded-lg border border-border bg-transparent px-3 py-2 text-text-primary'
 
 // US-24.02: "campos mínimos" del backlog — tipo de producto, proveedor,
 // número de orden de compra, fechas, cantidad, valores, documento
@@ -30,7 +31,7 @@ export function CompraForm({
     <form action={formAction} className="max-w-2xl space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1">
-          <label htmlFor="producto_id" className="text-sm font-medium">
+          <label htmlFor="producto_id" className="text-sm font-medium text-text-primary">
             Producto *
           </label>
           <select
@@ -51,7 +52,7 @@ export function CompraForm({
           </select>
         </div>
         <div className="space-y-1">
-          <label htmlFor="proveedor_id" className="text-sm font-medium">
+          <label htmlFor="proveedor_id" className="text-sm font-medium text-text-primary">
             Proveedor *
           </label>
           <select
@@ -74,7 +75,7 @@ export function CompraForm({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="numero_orden_compra" className="text-sm font-medium">
+        <label htmlFor="numero_orden_compra" className="text-sm font-medium text-text-primary">
           Número de orden de compra *
         </label>
         <input
@@ -88,7 +89,7 @@ export function CompraForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1">
-          <label htmlFor="fecha_compra" className="text-sm font-medium">
+          <label htmlFor="fecha_compra" className="text-sm font-medium text-text-primary">
             Fecha de compra *
           </label>
           <input
@@ -101,7 +102,7 @@ export function CompraForm({
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="fecha_recepcion" className="text-sm font-medium">
+          <label htmlFor="fecha_recepcion" className="text-sm font-medium text-text-primary">
             Fecha de recepción
           </label>
           <input
@@ -116,7 +117,7 @@ export function CompraForm({
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-1">
-          <label htmlFor="cantidad" className="text-sm font-medium">
+          <label htmlFor="cantidad" className="text-sm font-medium text-text-primary">
             Cantidad *
           </label>
           <input
@@ -131,7 +132,7 @@ export function CompraForm({
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="valor_unitario" className="text-sm font-medium">
+          <label htmlFor="valor_unitario" className="text-sm font-medium text-text-primary">
             Valor unitario *
           </label>
           <input
@@ -146,7 +147,7 @@ export function CompraForm({
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="valor_total" className="text-sm font-medium">
+          <label htmlFor="valor_total" className="text-sm font-medium text-text-primary">
             Valor total *
           </label>
           <input
@@ -163,7 +164,7 @@ export function CompraForm({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="documento_tributario" className="text-sm font-medium">
+        <label htmlFor="documento_tributario" className="text-sm font-medium text-text-primary">
           Documento tributario asociado
         </label>
         <input
@@ -176,18 +177,14 @@ export function CompraForm({
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Guardando…' : 'Registrar compra'}
-      </button>
+      </Button>
     </form>
   )
 }

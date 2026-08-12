@@ -9,7 +9,7 @@ export default async function NuevoIncidentePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Registrar incidente de seguridad</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Registrar incidente de seguridad</h1>
       <IncidenteForm action={crearIncidente} usuarios={usuarios} />
     </div>
   )

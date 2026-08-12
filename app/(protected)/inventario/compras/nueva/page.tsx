@@ -11,7 +11,7 @@ export default async function NuevaCompraPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Nueva compra</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Nueva compra</h1>
       <CompraForm action={crearCompra} productos={productos} proveedores={proveedores} />
     </div>
   )

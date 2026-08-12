@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { getProfile } from '@/lib/auth/dal'
 import { listarMotivosEntregaFallida } from '@/lib/motivos-entrega/dal'
+import { ButtonLink } from '@/components/ui/Button'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
 
 // US-19.03: "se pueden crear/activar/desactivar motivos [de entrega fallida]".
 export default async function MotivosEntregaFallidaPage() {
@@ -11,29 +13,22 @@ export default async function MotivosEntregaFallidaPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Motivos de entrega fallida</h1>
-        {puedeGestionar && (
-          <Link
-            href="/admin/motivos-entrega/nuevo"
-            className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background"
-          >
-            Nuevo motivo
-          </Link>
-        )}
+        <h1 className="text-2xl font-semibold text-text-primary">Motivos de entrega fallida</h1>
+        {puedeGestionar && <ButtonLink href="/admin/motivos-entrega/nuevo">Nuevo motivo</ButtonLink>}
       </div>
 
       {motivos.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Sin motivos registrados.</p>
+        <p className="text-sm text-text-muted">Sin motivos registrados.</p>
       ) : (
-        <ul className="divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {motivos.map((motivo) => (
             <li key={motivo.id}>
               <Link
                 href={`/admin/motivos-entrega/${motivo.id}`}
-                className="flex items-center justify-between px-4 py-3 hover:bg-black/5 dark:hover:bg-white/10"
+                className="flex items-center justify-between px-4 py-3 hover:bg-surface-alt"
               >
-                <span className="font-medium">{motivo.nombre}</span>
-                <span className="text-xs uppercase text-zinc-500 dark:text-zinc-400">{motivo.estado}</span>
+                <span className="font-medium text-text-primary">{motivo.nombre}</span>
+                <EstadoBadge estado={motivo.estado} />
               </Link>
             </li>
           ))}

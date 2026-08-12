@@ -26,8 +26,8 @@ export default async function EntradaStockPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Registrar entrada de stock</h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <h1 className="text-2xl font-semibold text-text-primary">Registrar entrada de stock</h1>
+        <p className="text-sm text-text-muted">
           {producto.nombre} · stock actual: {producto.stock_actual} {producto.unidad_medida}
         </p>
       </div>

@@ -5,6 +5,7 @@ import { cambiarRolUsuario, cambiarEstadoUsuario } from '@/lib/usuarios/actions'
 import { ROL_LABELS } from '@/lib/auth/types'
 import { CambiarRolForm } from '../cambiar-rol-form'
 import { CambiarEstadoUsuarioForm } from '../cambiar-estado-usuario-form'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
 
 // US-19.01: "se puede cambiar rol · se puede activar o desactivar usuario ·
 // los cambios quedan auditados" (historial visible más abajo, igual criterio
@@ -26,15 +27,16 @@ export default async function FichaUsuarioPage({ params }: { params: Promise<{ i
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">{usuario.nombre}</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{usuario.email}</p>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          {usuario.rol ? ROL_LABELS[usuario.rol] : 'Sin rol asignado'} · {usuario.estado}
+        <h1 className="text-2xl font-semibold text-text-primary">{usuario.nombre}</h1>
+        <p className="text-sm text-text-muted">{usuario.email}</p>
+        <p className="mt-1 flex items-center gap-2 text-sm text-text-muted">
+          <span>{usuario.rol ? ROL_LABELS[usuario.rol] : 'Sin rol asignado'}</span>
+          <EstadoBadge estado={usuario.estado} />
         </p>
       </div>
 
       {esUnoMismo ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-text-muted">
           No puedes cambiar tu propio rol ni desactivar tu propia cuenta.
         </p>
       ) : (
@@ -45,13 +47,13 @@ export default async function FichaUsuarioPage({ params }: { params: Promise<{ i
       )}
 
       <section>
-        <h2 className="font-medium">Historial de cambios</h2>
+        <h2 className="font-medium text-text-primary">Historial de cambios</h2>
         {historial.length === 0 ? (
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Sin cambios registrados todavía.</p>
+          <p className="mt-2 text-sm text-text-muted">Sin cambios registrados todavía.</p>
         ) : (
           <ul className="mt-2 space-y-2 text-sm">
             {historial.map((cambio) => (
-              <li key={cambio.id} className="text-zinc-600 dark:text-zinc-400">
+              <li key={cambio.id} className="text-text-muted">
                 {new Date(cambio.creado_en).toLocaleString('es-CL')} · {cambio.campo}:{' '}
                 {cambio.valor_anterior ?? '—'} → {cambio.valor_nuevo ?? '—'}
               </li>

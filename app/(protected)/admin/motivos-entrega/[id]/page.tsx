@@ -1,8 +1,9 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getProfile } from '@/lib/auth/dal'
 import { obtenerMotivoEntregaFallida, obtenerHistorialMotivoEntregaFallida } from '@/lib/motivos-entrega/dal'
 import { cambiarEstadoMotivoEntregaFallida } from '@/lib/motivos-entrega/actions'
+import { Button, ButtonLink } from '@/components/ui/Button'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
 
 export default async function FichaMotivoEntregaFallidaPage({
   params,
@@ -25,39 +26,35 @@ export default async function FichaMotivoEntregaFallidaPage({
     <div className="space-y-8">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{motivo.nombre}</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">estado {motivo.estado}</p>
+          <h1 className="text-2xl font-semibold text-text-primary">{motivo.nombre}</h1>
+          <p className="mt-1">
+            <EstadoBadge estado={motivo.estado} />
+          </p>
         </div>
         {puedeGestionar && (
           <div className="flex items-center gap-2">
             <form action={cambiarEstadoConId}>
               <input type="hidden" name="estado" value={motivo.estado === 'activo' ? 'inactivo' : 'activo'} />
-              <button
-                type="submit"
-                className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-              >
+              <Button type="submit" variante="secondary">
                 {motivo.estado === 'activo' ? 'Desactivar' : 'Activar'}
-              </button>
+              </Button>
             </form>
-            <Link
-              href={`/admin/motivos-entrega/${motivo.id}/editar`}
-              className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-            >
+            <ButtonLink href={`/admin/motivos-entrega/${motivo.id}/editar`} variante="secondary">
               Editar
-            </Link>
+            </ButtonLink>
           </div>
         )}
       </div>
 
       {puedeGestionar && (
         <section>
-          <h2 className="font-medium">Historial de cambios</h2>
+          <h2 className="font-medium text-text-primary">Historial de cambios</h2>
           {historial.length === 0 ? (
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Sin cambios registrados todavía.</p>
+            <p className="mt-2 text-sm text-text-muted">Sin cambios registrados todavía.</p>
           ) : (
             <ul className="mt-2 space-y-2 text-sm">
               {historial.map((cambio) => (
-                <li key={cambio.id} className="text-zinc-600 dark:text-zinc-400">
+                <li key={cambio.id} className="text-text-muted">
                   {new Date(cambio.creado_en).toLocaleString('es-CL')} · {cambio.campo}:{' '}
                   {cambio.valor_anterior ?? '—'} → {cambio.valor_nuevo ?? '—'}
                 </li>

@@ -9,6 +9,9 @@ import {
   type TipoIncidenteSeguridad,
   type EstadoIncidenteSeguridad,
 } from '@/lib/incidentes/types'
+import { ButtonLink } from '@/components/ui/Button'
+import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
+import { EstadoBadge } from '@/components/ui/EstadoBadge'
 
 // US-26.02: "acceso restringido a administrador/auditor".
 const ROLES_VER_INCIDENTES = ['administrador', 'auditor_consulta'] as const
@@ -43,56 +46,24 @@ export default async function IncidentesPage({ searchParams }: { searchParams: P
 
   const puedeGestionar = (ROLES_GESTION_INCIDENTES as readonly string[]).includes(profile.rol)
   const hayFiltros = fecha_desde || fecha_hasta || tipo || estado
+  const claseCampo = 'rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary'
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Incidentes de seguridad</h1>
-        {puedeGestionar && (
-          <Link
-            href="/incidentes/nuevo"
-            className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background"
-          >
-            Registrar incidente
-          </Link>
-        )}
+        <h1 className="text-2xl font-semibold text-text-primary">Incidentes de seguridad</h1>
+        {puedeGestionar && <ButtonLink href="/incidentes/nuevo">Registrar incidente</ButtonLink>}
       </div>
 
-      <form className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <label htmlFor="fecha_desde" className="text-sm font-medium">
-            Desde
-          </label>
-          <input
-            type="date"
-            id="fecha_desde"
-            name="fecha_desde"
-            defaultValue={fecha_desde}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="fecha_hasta" className="text-sm font-medium">
-            Hasta
-          </label>
-          <input
-            type="date"
-            id="fecha_hasta"
-            name="fecha_hasta"
-            defaultValue={fecha_hasta}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="tipo" className="text-sm font-medium">
-            Tipo
-          </label>
-          <select
-            id="tipo"
-            name="tipo"
-            defaultValue={tipo}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          >
+      <FiltrosBar hrefLimpiar={hayFiltros ? '/incidentes' : undefined}>
+        <CampoFiltro label="Desde" htmlFor="fecha_desde">
+          <input type="date" id="fecha_desde" name="fecha_desde" defaultValue={fecha_desde} className={claseCampo} />
+        </CampoFiltro>
+        <CampoFiltro label="Hasta" htmlFor="fecha_hasta">
+          <input type="date" id="fecha_hasta" name="fecha_hasta" defaultValue={fecha_hasta} className={claseCampo} />
+        </CampoFiltro>
+        <CampoFiltro label="Tipo" htmlFor="tipo">
+          <select id="tipo" name="tipo" defaultValue={tipo} className={claseCampo}>
             <option value="">Todos</option>
             {TIPOS_INCIDENTE.map((t) => (
               <option key={t} value={t}>
@@ -100,17 +71,9 @@ export default async function IncidentesPage({ searchParams }: { searchParams: P
               </option>
             ))}
           </select>
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="estado" className="text-sm font-medium">
-            Estado
-          </label>
-          <select
-            id="estado"
-            name="estado"
-            defaultValue={estado}
-            className="rounded border border-black/10 bg-transparent px-3 py-2 text-sm dark:border-white/20"
-          >
+        </CampoFiltro>
+        <CampoFiltro label="Estado" htmlFor="estado">
+          <select id="estado" name="estado" defaultValue={estado} className={claseCampo}>
             <option value="">Todos</option>
             {ESTADOS_INCIDENTE.map((e) => (
               <option key={e} value={e}>
@@ -118,43 +81,30 @@ export default async function IncidentesPage({ searchParams }: { searchParams: P
               </option>
             ))}
           </select>
-        </div>
-        <button
-          type="submit"
-          className="rounded border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/20"
-        >
-          Filtrar
-        </button>
-        {hayFiltros && (
-          <Link href="/incidentes" className="text-sm text-zinc-500 underline dark:text-zinc-400">
-            Limpiar filtros
-          </Link>
-        )}
-      </form>
+        </CampoFiltro>
+      </FiltrosBar>
 
       {incidentes.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Sin incidentes para este filtro.</p>
+        <p className="text-sm text-text-muted">Sin incidentes para este filtro.</p>
       ) : (
-        <ul className="divide-y divide-black/10 rounded border border-black/10 dark:divide-white/10 dark:border-white/10">
+        <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {incidentes.map((incidente) => (
             <li key={incidente.id}>
               <Link
                 href={`/incidentes/${incidente.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-black/5 dark:hover:bg-white/10"
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-alt"
               >
                 <span>
-                  <span className="text-sm text-zinc-500 dark:text-zinc-400">{incidente.fecha_incidente}</span>
+                  <span className="text-sm text-text-muted">{incidente.fecha_incidente}</span>
                   <span className="mx-2">·</span>
-                  <span className="font-medium">{TIPO_INCIDENTE_LABELS[incidente.tipo]}</span>
-                  <span className="ml-2 text-sm text-zinc-500 dark:text-zinc-400">
+                  <span className="font-medium text-text-primary">{TIPO_INCIDENTE_LABELS[incidente.tipo]}</span>
+                  <span className="ml-2 text-sm text-text-muted">
                     {incidente.cantidad_personas_afectadas} persona
                     {incidente.cantidad_personas_afectadas === 1 ? '' : 's'} afectada
                     {incidente.cantidad_personas_afectadas === 1 ? '' : 's'}
                   </span>
                 </span>
-                <span className="text-xs uppercase text-zinc-500 dark:text-zinc-400">
-                  {ESTADO_INCIDENTE_LABELS[incidente.estado]}
-                </span>
+                <EstadoBadge estado={incidente.estado} />
               </Link>
             </li>
           ))}

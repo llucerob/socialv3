@@ -7,7 +7,7 @@ export default async function NuevoSectorPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Nuevo sector</h1>
+      <h1 className="text-2xl font-semibold text-text-primary">Nuevo sector</h1>
       <SectorForm action={crearSector} submitLabel="Crear sector" />
     </div>
   )
