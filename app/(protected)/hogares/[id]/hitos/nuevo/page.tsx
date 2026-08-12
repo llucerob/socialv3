@@ -4,6 +4,7 @@ import { listarIntegrantes } from '@/lib/personas/dal'
 import { requireRoleHitos, ROLES_REGISTRAR_HITOS } from '@/lib/hitos/dal'
 import { registrarHito } from '@/lib/hitos/actions'
 import { HitoForm } from '../../hito-form'
+import { BannerSensible } from '@/components/ui/BannerSensible'
 
 export default async function NuevoHitoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -20,9 +21,14 @@ export default async function NuevoHitoPage({ params }: { params: Promise<{ id: 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Registrar hito</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{hogar.direccion}</p>
+        <h1 className="text-2xl font-semibold text-text-primary">Registrar hito</h1>
+        <p className="text-sm text-text-muted">{hogar.direccion}</p>
       </div>
+
+      <BannerSensible>
+        Información sensible — visible solo para evaluador social, aprobador y administrador.
+      </BannerSensible>
+
       <HitoForm action={registrarConHogar} integrantes={integrantes} />
     </div>
   )

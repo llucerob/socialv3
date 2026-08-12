@@ -6,6 +6,7 @@ import { listarSolicitudesDeHogar } from '@/lib/solicitudes/dal'
 import { ROLES_REGISTRAR_INFORMES } from '@/lib/informes-sociales/dal'
 import { crearInformeSocial } from '@/lib/informes-sociales/actions'
 import { InformeSocialForm } from '../../informe-social-form'
+import { BannerSensible } from '@/components/ui/BannerSensible'
 
 // US-23.01: "como asistente social, quiero registrar un informe social
 // estructurado". US-05.05/US-23.03: si se llega desde una solicitud sin
@@ -32,10 +33,15 @@ export default async function NuevoInformeSocialPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Registrar informe social</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{hogar.direccion}</p>
+      <div className="rounded-xl bg-brand-800 p-6">
+        <h1 className="text-2xl font-semibold text-white">Registrar informe social</h1>
+        <p className="mt-1 text-sm text-brand-100">{hogar.direccion}</p>
       </div>
+
+      <BannerSensible>
+        Información sensible — visible solo para evaluador social, aprobador y administrador.
+      </BannerSensible>
+
       <InformeSocialForm
         action={registrarConHogar}
         integrantes={integrantes}

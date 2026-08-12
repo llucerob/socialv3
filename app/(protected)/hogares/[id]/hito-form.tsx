@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import type { HitoFormState } from '@/lib/hitos/actions'
 import { TIPO_HITO_LABELS, type TipoHito } from '@/lib/hitos/types'
 import type { Persona } from '@/lib/personas/types'
+import { Button } from '@/components/ui/Button'
 
 type HitoFormAction = (state: HitoFormState, formData: FormData) => Promise<HitoFormState>
 
@@ -18,21 +19,16 @@ export function HitoForm({
 }) {
   const [state, formAction, pending] = useActionState(action, undefined)
   const valores = state?.valores
+  const claseCampo = 'w-full rounded-lg border border-border bg-transparent px-3 py-2 text-text-primary'
 
   return (
     <form action={formAction} className="max-w-lg space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label htmlFor="tipo" className="text-sm font-medium">
+          <label htmlFor="tipo" className="text-sm font-medium text-text-primary">
             Tipo de hito *
           </label>
-          <select
-            id="tipo"
-            name="tipo"
-            required
-            defaultValue={valores?.tipo ?? ''}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
-          >
+          <select id="tipo" name="tipo" required defaultValue={valores?.tipo ?? ''} className={claseCampo}>
             <option value="" disabled>
               Selecciona un tipo…
             </option>
@@ -44,7 +40,7 @@ export function HitoForm({
           </select>
         </div>
         <div className="space-y-1">
-          <label htmlFor="fecha_hito" className="text-sm font-medium">
+          <label htmlFor="fecha_hito" className="text-sm font-medium text-text-primary">
             Fecha del hito *
           </label>
           <input
@@ -53,13 +49,13 @@ export function HitoForm({
             type="date"
             required
             defaultValue={valores?.fecha_hito ?? ''}
-            className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+            className={claseCampo}
           />
         </div>
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="categoria" className="text-sm font-medium">
+        <label htmlFor="categoria" className="text-sm font-medium text-text-primary">
           Categoría *
         </label>
         <input
@@ -68,19 +64,19 @@ export function HitoForm({
           required
           placeholder="Ej. cambio de composición familiar, hospitalización…"
           defaultValue={valores?.categoria ?? ''}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="persona_id" className="text-sm font-medium">
+        <label htmlFor="persona_id" className="text-sm font-medium text-text-primary">
           Integrante asociado
         </label>
         <select
           id="persona_id"
           name="persona_id"
           defaultValue={valores?.persona_id ?? ''}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         >
           <option value="">Ninguno (hito del hogar en general)</option>
           {integrantes.map((persona) => (
@@ -92,7 +88,7 @@ export function HitoForm({
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="comentario" className="text-sm font-medium">
+        <label htmlFor="comentario" className="text-sm font-medium text-text-primary">
           Comentario *
         </label>
         <textarea
@@ -101,23 +97,19 @@ export function HitoForm({
           required
           rows={4}
           defaultValue={valores?.comentario ?? ''}
-          className="w-full rounded border border-black/10 bg-transparent px-3 py-2 dark:border-white/20"
+          className={claseCampo}
         />
       </div>
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger-fg">
           {state.error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? 'Guardando…' : 'Registrar hito'}
-      </button>
+      </Button>
     </form>
   )
 }
