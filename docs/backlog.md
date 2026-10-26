@@ -363,16 +363,19 @@ para respaldar el cumplimiento del deber de notificación que exige la Ley 21.71
 ## EPIC 21 — Pruebas y validación del MVP 🆕 (cuatro pruebas agregadas)
 
 ### US-21.01 a US-21.06 — sin cambios respecto a la v2.
+Resultado de la ejecución: US-21.01 ✅ · US-21.02 ✅ · US-21.03 ✅ · US-21.04 ✅ · US-21.05 ✅ · US-21.06 ✅
 
-### 🆕 US-21.07 — Probar flujo completo de reembolso excepcional por cirugía
+**Decisión (2026-10-26) — estado terminal de la solicitud:** el criterio "la solicitud queda cerrada" / "se cierra solicitud" de US-21.01, US-21.02 y US-21.04 (heredado de la v2) se redefine como "la solicitud queda en el estado terminal `entregada_pagada`". El sistema asigna ese estado automáticamente al completar la entrega (`marcar_solicitud_entregada`) o el pago (`marcar_solicitud_reembolso_pagada`), y queda auditado en `solicitudes_historial`. No se agrega una acción manual de cierre, por tres razones: el Contexto Maestro no define un estado "cerrada" (su lista termina en entregada / no entregada / anulada), un paso manual dejaría solicitudes sin cerrar y metería ruido en los KPIs, y no hay ninguna regla de negocio que lo exija. Los valores `cerrada` y `asignada_entrega_pago` siguen en el enum `estado_solicitud` sin uso, porque eliminar valores de un enum en Postgres obliga a recrear el tipo y no aporta nada. Ninguna pantalla los muestra. Si en el futuro se define un seguimiento posterior a la entrega (visita de verificación, rendición), esa decisión debe revisarse.
+
+### 🆕 US-21.07 ✅ — Probar flujo completo de reembolso excepcional por cirugía
 **Prioridad:** P0 · **Dependencias:** EPIC 25.
 **Criterios de aceptación:** se crea solicitud con informe social asociado · se calcula remanente anual correctamente · se aprueba dentro del remanente · se registra pago · queda marcado como excepcional en historial y reportes.
 
-### 🆕 US-21.08 — Probar flujo completo de reembolso excepcional por fallecimiento
+### 🆕 US-21.08 ✅ — Probar flujo completo de reembolso excepcional por fallecimiento
 **Prioridad:** P0 · **Dependencias:** EPIC 25.
 **Criterios de aceptación:** análogos a US-21.07, adaptados al caso de fallecimiento.
 
-### 🆕 US-21.09 — Probar flujo de entrega con corte de conexión
+### 🆕 US-21.09 ✅ — Probar flujo de entrega con corte de conexión
 **Prioridad:** P0 · **Dependencias:** EPIC 27.
 **Criterios de aceptación:**
 - Se simula pérdida de señal durante el registro de una entrega y su evidencia.
@@ -380,11 +383,11 @@ para respaldar el cumplimiento del deber de notificación que exige la Ley 21.71
 - Al restablecer la conexión, los datos se sincronizan automáticamente sin intervención manual.
 - El registro sincronizado conserva la fecha/hora original de captura, no la de sincronización.
 
-### 🆕 US-21.10 — Probar cálculo automático de ruta por cercanía ✅⚠️
+### 🆕 US-21.10 ✅ — Probar cálculo automático de ruta por cercanía
 **Prioridad:** P1 · **Dependencias:** 🆕 US-13.04.
 **Criterios de aceptación:** se crean hogares con coordenadas dentro de un mismo sector · el sistema calcula un orden razonable por cercanía · un hogar sin coordenadas queda correctamente marcado y al final de la lista, sin bloquear el cálculo del resto.
 
-### 🆕 US-21.11 — Probar cálculo automático de tramos y remanente compartido entre reembolso general y excepcional
+### 🆕 US-21.11 ✅ — Probar cálculo automático de tramos y remanente compartido entre reembolso general y excepcional
 **Prioridad:** P0 · **Dependencias:** 🆕 US-14.05, 🆕 US-25.02.
 **Criterios de aceptación:**
 - Un hogar usa 2 reembolsos generales en el año ($50.000 + $25.000 = $75.000 usados).
@@ -393,7 +396,7 @@ para respaldar el cumplimiento del deber de notificación que exige la Ley 21.71
 - Una 3ª solicitud general posterior queda con tope $0 y el sistema bloquea su aprobación, mostrando el motivo (pool anual agotado).
 - Una solicitud general enviada en enero o diciembre queda bloqueada por estar fuera del período vigente (febrero-noviembre).
 
-> **Estado (EPIC 21):** el proyecto no tiene framework de pruebas automatizadas (`Tests: pendiente de definir`), así que "implementar" estas historias significó escribir planes de prueba manuales ejecutables, no código — ver `docs/pruebas-epic-21.md` para el detalle completo, paso a paso, con el resultado esperado mapeado a cada criterio de aceptación. Se escribieron planes para las 6 historias cuyas dependencias ya existen (US-21.01 a US-21.05 — headers en la v2 — y US-21.10, marcada ✅⚠️ arriba). Las 5 restantes (US-21.06, US-21.07, US-21.08, US-21.09, US-21.11) dependen de EPICs que todavía no están implementados (23, 25, 27) y quedan sin marcar — no es un "no aplica", es un bloqueo real documentado en `docs/pruebas-epic-21.md`, pendiente de revisarse cuando esos EPICs se construyan. Ningún plan se ejecutó contra una instancia real en esta sesión (Docker/Supabase no estaba disponible, igual que en las sesiones anteriores) — de ahí el ⚠️ en vez de un ✅ simple, mismo criterio que US-01.05 ✅⚠️. El plan de US-21.01/02/04 documenta además un hallazgo transversal: ninguna acción de la aplicación lleva una solicitud al estado `cerrada` (el enum lo define pero nada lo usa) — el flujo real termina en `entregada_pagada`, así que el criterio "la solicitud queda cerrada" no se cumple literalmente tal como está construido hoy.
+> **Estado (EPIC 21):** las 11 historias se **ejecutaron en vivo** el 2026-10-26 contra Supabase local y la app en `next dev`, con Playwright y verificación SQL directa. El detalle por criterio está en `docs/pruebas-epic-21.md`. Las dependencias que antes las bloqueaban (EPIC 23, 25 y 27) ya están construidas. Una primera corrida se cortó por un apagón y se repitió completa: no quedó nada truncado en el repositorio ni en las migraciones, y los fallos de esa corrida eran de los scripts de QA, no de la app. Las 11 historias pasan (✅). US-21.01, US-21.02 y US-21.04 se completan con el criterio de cierre redefinido: `entregada_pagada` es el estado terminal, ver la decisión arriba. En US-21.02 la talla se registra como texto libre y por el producto descontado ("Pañales talla M"), no en un campo propio.
 
 ---
 

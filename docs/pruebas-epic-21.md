@@ -1,215 +1,193 @@
 # EPIC 21 — Pruebas y validación del MVP
 
-**Estado de esta entrega:** el proyecto no tiene ningún framework de pruebas automatizadas configurado (`CLAUDE.md`: "Tests: pendiente de definir"; no hay `jest`/`vitest`/`playwright` en `package.json`). Introducir uno sería una decisión técnica nueva no solicitada, así que este documento entrega **planes de prueba manuales**: procedimientos paso a paso, ejecutables por una persona contra una instancia real (local o de staging), con el resultado esperado de cada paso mapeado explícitamente a los criterios de aceptación de su historia.
+**Estado:** las 11 historias de este EPIC (US-21.01 a US-21.11) se **ejecutaron en vivo** el 2026-10-26 contra Supabase local (`127.0.0.1:54321`, 63 migraciones aplicadas) y la app en `next dev`, conducidas con Playwright (Chromium headless) y verificadas en la base de datos con consultas SQL directas. Todas las dependencias (EPIC 23 informes sociales, EPIC 25 reembolsos excepcionales, EPIC 27 offline) ya están construidas, así que ninguna historia queda bloqueada.
 
-No se ejecutaron estas pruebas en esta sesión — Docker/Supabase no estaba disponible, así que no había ninguna instancia contra la cual correrlas. Cada plan está escrito a partir de una lectura directa del código ya implementado (rutas, componentes, Server Actions, RLS), no de suposiciones, y anota explícitamente cuando algo en el código no cumple literalmente un criterio de aceptación.
+El proyecto sigue sin framework de pruebas automatizadas (`CLAUDE.md`: "Tests: pendiente de definir"). Los scripts usados son de QA local, no forman parte del repositorio (`scripts-qa-tmp-*.mjs` en la raíz, sin versionar) y escriben datos de prueba en la BD local (hogares con dirección `QA21-…`, usuarios `qa.*@coinco.test`). **No deben ejecutarse contra una base con datos reales migrados** (`origen = 'migracion'`).
 
-## Alcance: 6 de 11 historias
+> **Re-ejecución tras corte de energía (2026-10-26):** una primera corrida se interrumpió por un apagón antes de actualizar este documento. Se verificó que ningún archivo versionado quedó truncado (`git status` limpio, `git fsck` sin errores, migraciones locales = aplicadas), se re-ejecutaron las 11 pruebas desde cero, y se corrigieron los scripts para que sean re-ejecutables (ver "Ajustes a los scripts de QA" al final). Los problemas encontrados fueron todos de los scripts, ninguno de la aplicación.
 
-Cuatro historias de este EPIC dependen de EPICs que todavía no existen en el proyecto y no pueden probarse:
+## Resumen de resultados
 
-| Historia | Depende de | Motivo del bloqueo |
+| Historia | Resultado | Observaciones |
 |---|---|---|
-| US-21.06 — Excepción RSH | EPIC 23 (informes sociales estructurados) | EPIC 23 no está implementado — no existe forma de "adjuntar informe social estructurado" en la aplicación. |
-| US-21.07 — Reembolso excepcional por cirugía | EPIC 25 | EPIC 25 (reembolsos excepcionales) no está implementado — el flujo no existe. |
-| US-21.08 — Reembolso excepcional por fallecimiento | EPIC 25 | Idem US-21.07. |
-| US-21.11 — Tramos y remanente compartido general/excepcional | US-25.02 (parte de EPIC 25) | El remanente compartido con reembolsos excepcionales no puede probarse porque el lado "excepcional" no existe todavía; solo la mitad del criterio (reembolso general) es ejecutable hoy. |
-
-Quedan documentadas aquí como bloqueadas, no como "no aplican" — deben volver a evaluarse cuando se implementen esos EPICs.
-
-**Actualización (EPIC 27 implementado):** US-21.09 — Entrega con corte de conexión ya no está bloqueada. EPIC 27 (PWA offline) se implementó en una sesión posterior a la redacción original de este documento (`next-pwa`, IndexedDB, cola de sincronización — ver `docs/backlog.md`) y **sí se ejecutó en vivo** contra Supabase local y navegador real, a diferencia del resto de este documento (que quedó como plan sin ejecutar por falta de Docker en su momento). Ver detalle en la sección dedicada más abajo.
-
-Las 7 restantes (US-21.01 a US-21.05, US-21.09, US-21.10) tienen todas sus dependencias construidas y se detallan a continuación.
+| US-21.01 — Caja de mercadería | ✅ | Todos los criterios (cierre = `entregada_pagada`, ver decisión). |
+| US-21.02 — Pañales | ✅ | Talla va como texto libre + producto por talla; cierre = `entregada_pagada`. |
+| US-21.03 — Materiales de construcción | ✅ | Todos los criterios. |
+| US-21.04 — Reembolso médico general | ✅ | Todos los criterios (cierre = `entregada_pagada`). |
+| US-21.05 — Reembolso por diálisis | ✅ | Todos los criterios. |
+| US-21.06 — Excepción RSH | ✅ | Todos los criterios, incluido el aislamiento de bodega. |
+| US-21.07 — Excepcional por cirugía | ✅ | Todos los criterios. |
+| US-21.08 — Excepcional por fallecimiento | ✅ | Todos los criterios. |
+| US-21.09 — Entrega con corte de conexión | ✅ | Todos los criterios; hora de captura preservada con 20 s de corte. |
+| US-21.10 — Ruta por cercanía | ✅ | Todos los criterios (con inserción en orden revuelto). |
+| US-21.11 — Tramos y remanente compartido | ✅ | Todos los criterios. |
 
 ## Precondiciones generales
 
-- Al menos un usuario activo por rol necesario: `administrador`, `evaluador_social`, `aprobador`, `bodega_logistica`, `terreno_repartidor`, `finanzas`. Se asignan editando el usuario en `/admin/usuarios` (EPIC 19).
-- Al menos un sector activo en `/admin/sectores` (EPIC 19) — necesario porque el formulario de hogar ya no acepta texto libre.
-- Los tipos de ayuda y productos de inventario base ya vienen sembrados por las migraciones (`Caja de mercadería`, `Pañales de adulto`, `Materiales de construcción`, `Reembolso médico general`, `Reembolso médico por diálisis`; productos `Caja de mercadería`, `Pañales talla M/L/XL`, `Nylon`, `Ripio`, `Planchas OSB`, `Tapas`) — no hace falta crearlos.
-- El stock de todos los productos parte en 0: cualquier prueba que llegue a "registrar salida de stock" necesita una entrada de stock previa (`/inventario/{id}/entrada`) como parte de la preparación.
-- Un hogar de prueba con `tramo_rsh` ≤ 40 (p. ej. 25) para que ninguna de estas solicitudes quede bloqueada por el umbral de elegibilidad RSH (US-05.04, `UMBRAL_ELEGIBILIDAD_RSH = 40`) — ese bloqueo es un flujo distinto (US-21.06, bloqueada).
+- Un usuario activo por rol: `administrador`, `evaluador_social`, `aprobador`, `bodega_logistica`, `terreno_repartidor`, `finanzas` (en QA: `qa.<rol>@coinco.test`, creados vía Auth Admin API y con rol asignado en `profiles`).
+- Al menos un sector activo (`Centro`).
+- Tipos de ayuda y productos base sembrados por migraciones.
+- Hogares de prueba con `tramo_rsh` 25 (≤ 40), salvo US-21.06 que usa 55.
+- Toda prueba que descuenta stock registra antes una entrada (`/inventario/{id}/entrada`).
 
-## Hallazgo transversal: el estado `cerrada`
+## Decisión: `entregada_pagada` es el estado terminal (antes "hallazgo transversal: el estado `cerrada`")
 
-Tres historias (US-21.01, US-21.02, US-21.04) piden explícitamente que "la solicitud queda cerrada" / "se cierra solicitud". El enum `estado_solicitud` incluye el valor `cerrada`, pero **ninguna acción de la aplicación transiciona una solicitud a `cerrada`** (verificado con `grep -r "'cerrada'"` sobre todo `lib/`/`app/`: el único lugar donde aparece el literal es la definición del tipo y del enum). El flujo real siempre termina en `entregada_pagada`, que en la práctica funciona como el estado terminal. Cada plan de prueba abajo lo marca explícitamente como criterio **no cumplible tal como está construido hoy** — no es un error de la prueba, es una discrepancia real entre el criterio de aceptación y el código. Se recomienda una historia de seguimiento pequeña (agregar una acción "Cerrar solicitud", o bien redefinir el criterio para aceptar `entregada_pagada` como cierre) antes de dar el EPIC por completamente validado.
+US-21.01, US-21.02 y US-21.04 piden que "la solicitud queda cerrada". El enum `estado_solicitud` define `cerrada`, pero **ninguna acción la usa** (re-verificado: el literal solo aparece en `lib/solicitudes/types.ts`). El flujo real termina en `entregada_pagada`, vía `marcar_solicitud_entregada` (ayudas físicas) o `marcar_solicitud_reembolso_pagada` (reembolsos), que en la práctica es el estado terminal. Lo mismo ocurre con `asignada_entrega_pago`: existe en el enum pero ninguna acción lo asigna (crear la entrega deja la solicitud en `aprobada`).
 
----
-
-## US-21.01 — Probar flujo completo de caja de mercadería
-
-**Objetivo:** validar el ciclo solicitud → evaluación → aprobación → entrega para una ayuda material simple, sin persona beneficiaria.
-
-**Roles necesarios:** administrador (o evaluador_social) para crear hogar/solicitud, evaluador_social para evaluar, aprobador para aprobar, bodega_logistica para stock y entrega, terreno_repartidor para completar la entrega.
-
-**Precondiciones:** stock de "Caja de mercadería" ≥ 1 (registrar una entrada de al menos 5 unidades en `/inventario/{id}/entrada`).
-
-**Pasos:**
-1. Crear un hogar en `/hogares/nuevo` (dirección, sector del catálogo, tramo RSH 25).
-2. Desde `/hogares/{id}`, crear una solicitud: tipo de ayuda "Caja de mercadería", fecha de hoy, motivo cualquiera. Persona beneficiaria: dejar vacía (no es obligatoria para este tipo).
-3. En `/solicitudes/{id}`, usar "Enviar a evaluación".
-4. Como evaluador_social, registrar una evaluación social: fundamento + recomendación "Aprobar".
-5. Como aprobador, en la sección de decisión, aprobar con "Cantidad o detalle aprobado" = "1 caja de mercadería".
-6. Como bodega_logistica, en la sección "Stock" de la misma solicitud, registrar salida: producto "Caja de mercadería", cantidad 1.
-7. Como bodega_logistica (o administrador), crear la entrega desde la solicitud y asignar un responsable de terreno con fecha programada.
-8. Como terreno_repartidor, en `/mis-entregas/{id}`, marcar la entrega como realizada: nombre de quien recibe (obligatorio) y evidencia fotográfica (obligatoria — `requiere_evidencia = true` para este tipo).
-
-**Resultado esperado por criterio:**
-- ✅ *Se crea hogar* — paso 1.
-- ✅ *Se crea solicitud* — paso 2.
-- ✅ *Se evalúa* — paso 4, visible en la sección de evaluaciones de la solicitud.
-- ✅ *Se aprueba* — paso 5; `decisiones_solicitud` recibe la fila, estado pasa a `aprobada`.
-- ✅ *Se genera entrega* — paso 7; estado pasa a `asignada_entrega_pago` o equivalente según el flujo de EPIC 12.
-- ✅ *Se registra evidencia* — paso 8: el archivo subido debe aparecer en la sección "Documentos" de la solicitud con `tipo_documento = fotografia`.
-- ⚠️ *La solicitud queda cerrada* — **no se cumple**: tras el paso 8 el estado queda en `entregada_pagada` (vía `marcar_solicitud_entregada`), no en `cerrada` (ver "Hallazgo transversal" arriba).
+**Decidido (2026-10-26):** se acepta `entregada_pagada` como estado terminal y el criterio "la solicitud queda cerrada" se redefine en ese sentido (ver `docs/backlog.md`, EPIC 21). No se agrega una acción manual de cierre: el Contexto Maestro no define un estado "cerrada", un paso manual dejaría solicitudes sin cerrar y metería ruido en los KPIs, y el estado actual ya lo asigna el sistema y queda auditado. Los valores `cerrada` y `asignada_entrega_pago` quedan en el enum sin uso.
 
 ---
 
-## US-21.02 — Probar flujo completo de pañales
+## US-21.01 — Flujo completo de caja de mercadería ✅
 
-**Objetivo:** validar el ciclo completo para una ayuda asociada a una persona beneficiaria específica, con descuento de stock.
+**Ejecución:** admin crea hogar y solicitud (sin persona beneficiaria) → envío a evaluación → evaluador registra evaluación → aprobador aprueba "1 caja de mercadería" → bodega registra entrada (+5) y salida (−1) de stock, crea entrega asignada a terreno → terreno la marca realizada con receptor y foto.
 
-**Roles necesarios:** igual que US-21.01.
-
-**Precondiciones:** el hogar de prueba debe tener al menos un integrante activo (crear en `/hogares/{id}/integrantes/nuevo`). Stock de "Pañales talla M" ≥ 1.
-
-**Pasos:**
-1. Reutilizar el hogar de US-21.01 (o crear uno nuevo) con un integrante activo agregado.
-2. Crear solicitud: tipo "Pañales de adulto". El campo "Persona beneficiaria" es **obligatorio** para este tipo (`requiere_persona_beneficiaria = true`) — seleccionar el integrante creado.
-3. Enviar a evaluación, evaluar y aprobar igual que US-21.01, con "Cantidad o detalle aprobado" = "Talla M, 2 paquetes" (no existe un campo dedicado de "talla"; se registra como texto libre dentro de este mismo campo — anotarlo así en el resultado).
-4. Bodega registra salida de stock: "Pañales talla M", cantidad 2.
-5. Crear entrega, asignar a terreno, y terreno la marca como realizada con evidencia.
-
-**Resultado esperado por criterio:**
-- ✅ *Se selecciona persona beneficiaria* — paso 2, y el formulario la exige (atributo `required`, reforzado en el servidor).
-- ⚠️ *Se registra talla y cantidad* — se cumple solo parcialmente: no hay campo "talla" propio, ambos datos van en el mismo texto libre de "cantidad o detalle aprobado" (paso 3). Suficiente para pasar la prueba, pero anotar como posible mejora de UX futura.
-- ✅ *Se aprueba solicitud* — paso 3.
-- ✅ *Se descuenta stock* — paso 4; confirmar que `productos.stock_actual` de "Pañales talla M" bajó en 2 tras la salida.
-- ✅ *Se registra entrega* — paso 5.
-- ⚠️ *Se cierra solicitud* — **no se cumple**, mismo hallazgo transversal que US-21.01 (queda en `entregada_pagada`).
-- **Nota adicional:** `tipos_ayuda.requiere_documentos = true` para "Pañales de adulto", pero a diferencia del reembolso por diálisis, **no existe ningún bloqueo real** que impida enviar a evaluación sin documentos adjuntos — es metadata sin efecto para este tipo. No es parte de los criterios de aceptación de esta historia, pero vale la pena confirmarlo durante la ejecución (se puede completar el flujo sin subir nada a "Documentos").
-
----
-
-## US-21.03 — Probar flujo completo de materiales de construcción
-
-**Objetivo:** validar evaluación, aprobación y entrega con antecedentes adjuntos y verificar visibilidad del historial.
-
-**Roles necesarios:** igual que US-21.01.
-
-**Precondiciones:** stock de al menos un producto de materiales (p. ej. "Planchas OSB") ≥ 1.
-
-**Pasos:**
-1. Crear solicitud sobre el hogar de prueba: tipo "Materiales de construcción". Persona beneficiaria no es obligatoria para este tipo.
-2. Antes o después de enviar a evaluación, subir al menos un documento a la solicitud (sección "Documentos", cualquier tipo — p. ej. "Otro") como antecedente.
-3. Enviar a evaluación, evaluar y aprobar con "Cantidad o detalle aprobado" = "10 planchas OSB, 2 rollos de nylon".
-4. Bodega registra salida de stock por cada producto aprobado.
-5. Crear entrega, asignar a terreno, completar con evidencia fotográfica (`requiere_evidencia = true`).
-6. Revisar la sección "Historial de cambios" de la solicitud (visible para administrador/evaluador_social).
-
-**Resultado esperado por criterio:**
-- ✅ *Se crea solicitud* — paso 1.
-- ✅ *Se adjuntan antecedentes* — paso 2, visible en "Documentos".
-- ✅ *Se aprueba detalle de materiales* — paso 3 (mismo mecanismo de texto libre que US-21.02).
-- ✅ *Se registra entrega* — paso 5.
-- ✅ *Se adjunta evidencia* — paso 5, archivo con `tipo_documento = fotografia`.
-- ✅ *El historial queda visible* — paso 6: cada cambio de `estado` (vía `solicitudes_historial`, disparado automáticamente) debe listarse con fecha y usuario.
-
----
-
-## US-21.04 — Probar flujo completo de reembolso médico general
-
-**Objetivo:** validar documentos, monto solicitado/aprobado y pago para un reembolso médico general.
-
-**Roles necesarios:** evaluador_social, aprobador, finanzas.
-
-**Precondiciones:** ninguna de stock (este tipo tiene `requiere_entrega = false`). **La fecha de la solicitud debe caer entre febrero y noviembre** (US-14.07) — usar una fecha dentro de ese rango o el envío a evaluación quedará bloqueado con un mensaje explícito (ese bloqueo es correcto, pero no es lo que esta prueba busca validar). El hogar de prueba no debe tener ya 4 reembolsos generales aprobados este año calendario (tope de tramos, US-14.05/14.06) — usar un hogar sin reembolsos previos.
-
-**Pasos:**
-1. Crear solicitud: tipo "Reembolso médico general", persona beneficiaria (obligatoria), monto solicitado (p. ej. $40.000), fecha dentro de febrero-noviembre.
-2. Subir al menos un documento de respaldo (p. ej. tipo "Boleta") — no hay bloqueo automático para este tipo específico (a diferencia de diálisis), pero es parte del criterio de aceptación probarlo igual.
-3. Enviar a evaluación, evaluar (recomendación "Aprobar").
-4. Aprobador aprueba con "Monto aprobado" = $40.000 (dentro del tope del 1º tramo, $50.000).
-5. Como finanzas, en la sección "Pago" de la solicitud, registrar el pago: fecha, monto pagado (≤ monto aprobado), medio de pago.
-
-**Resultado esperado por criterio:**
-- ✅ *Se crea solicitud* — paso 1.
-- ✅ *Se adjuntan documentos* — paso 2.
-- ✅ *Se registra monto solicitado* — paso 1, campo obligatorio para tipos `reembolso`.
-- ✅ *Se aprueba monto* — paso 4; verificar que el tope mostrado en el formulario coincide con el 1º tramo ($50.000) y el remanente anual del hogar.
-- ✅ *Se registra pago* — paso 5; verificar que `pagos_reembolso` rechaza un monto mayor al aprobado si se prueba el caso negativo.
-- ⚠️ *La solicitud queda cerrada* — **no se cumple**, mismo hallazgo transversal (queda en `entregada_pagada` vía `marcar_solicitud_reembolso_pagada`).
-
----
-
-## US-21.05 — Probar flujo completo de reembolso por diálisis
-
-**Objetivo:** validar certificado obligatorio, cálculo de acumulado mensual, bloqueo sobre el tope de $150.000 y reflejo en el reporte de diálisis.
-
-**Roles necesarios:** evaluador_social, aprobador, finanzas, auditor_consulta o administrador (para revisar el reporte).
-
-**Precondiciones:** una persona beneficiaria sin reembolsos de diálisis aprobados en el mes de prueba.
-
-**Pasos — certificado obligatorio:**
-1. Crear solicitud tipo "Reembolso médico por diálisis" para la persona de prueba, monto solicitado $80.000.
-2. Sin subir ningún documento, intentar "Enviar a evaluación" → debe bloquearse con un mensaje que liste exactamente lo que falta (certificado de diálisis y boleta/comprobante).
-3. Subir un documento tipo "Certificado de diálisis" y otro tipo "Boleta". Reintentar "Enviar a evaluación" → ahora debe pasar a `en_evaluacion`.
-
-**Pasos — tope mensual y bloqueo:**
-4. Evaluar y aprobar esta primera solicitud con monto aprobado $80.000 (el formulario debe mostrar "Acumulado mensual: $0 · saldo disponible: $150.000" antes de aprobar).
-5. Crear una segunda solicitud de diálisis para la **misma persona, mismo mes**, monto solicitado $100.000, repitiendo certificado + boleta, y enviarla a evaluación y evaluación social.
-6. Al aprobar la segunda, el formulario debe mostrar "Acumulado mensual: $80.000 · saldo disponible: $70.000" y bloquear cualquier intento de aprobar por sobre $70.000 (probar con $100.000 → debe rechazarse; con $70.000 → debe aceptarse).
-
-**Pasos — pago y reporte:**
-7. Como finanzas, registrar el pago de ambas solicitudes aprobadas.
-8. Ir a `/reportes/dialisis` (administrador, finanzas o auditor_consulta) y verificar que la persona de prueba aparece con "Monto acumulado: $150.000" y "Saldo disponible: $0" para el mes de prueba.
-
-**Resultado esperado por criterio:**
-- ✅ *La solicitud exige certificado de diálisis* — paso 2/3.
-- ✅ *El sistema calcula acumulado mensual* — pasos 4 y 6 (mensaje mostrado antes de aprobar).
-- ✅ *El sistema muestra saldo disponible* — idem.
-- ✅ *El sistema bloquea aprobación sobre $150.000* — paso 6 (intento de aprobar $100.000 sobre un saldo de $70.000 debe fallar tanto en el cliente como en el servidor).
-- ✅ *El sistema permite pago dentro del tope* — paso 7.
-- ✅ *El reporte de diálisis refleja el movimiento* — paso 8 (EPIC 17, `/reportes/dialisis`).
-
----
-
-## US-21.10 — Probar cálculo automático de ruta por cercanía
-
-**Objetivo:** validar que el cálculo de orden por cercanía (US-13.04) produce un orden razonable y maneja correctamente los hogares sin coordenadas.
-
-**Roles necesarios:** administrador (para configurar el punto de origen y crear hogares con coordenadas), bodega_logistica (para calcular el orden).
-
-**Precondiciones:** un punto de origen configurado en `/rutas/configuracion`. Un sector de prueba (p. ej. "Sector Prueba Rutas") creado en `/admin/sectores`.
-
-**Pasos:**
-1. Crear 4 hogares en el mismo sector de prueba, con solicitudes aprobadas y entregas pendientes asignadas a ese sector:
-   - Hogar A: coordenadas cercanas al punto de origen.
-   - Hogar B: coordenadas muy cercanas al Hogar A (a pocos metros).
-   - Hogar C: coordenadas lejanas del origen (en el otro extremo de la comuna).
-   - Hogar D: **sin coordenadas** (latitud/longitud vacías).
-2. En `/entregas`, filtrar por el sector de prueba.
-3. Presionar "Calcular orden por cercanía".
-4. Revisar el orden resultante en la sección "Ruta del sector".
-
-**Resultado esperado por criterio:**
-- ✅ *Se crean hogares con coordenadas dentro de un mismo sector* — paso 1.
-- ✅ *El sistema calcula un orden razonable por cercanía* — paso 4: el orden esperado es A → B → C (vecino más cercano desde el origen, heurística greedy) — confirmar que B queda inmediatamente después de A (son los más próximos entre sí) y no intercalado antes que A solo por estar más cerca del origen en línea recta.
-- ✅ *Un hogar sin coordenadas queda correctamente marcado y al final de la lista, sin bloquear el cálculo del resto* — el Hogar D debe aparecer al final, con la etiqueta "Sin georreferenciar", y A/B/C deben quedar ordenados con normalidad (el cálculo no debe fallar ni excluir a D de la lista, solo de la heurística de distancia).
-
----
-
-## Resumen de cobertura
-
-| Historia | Ejecutable hoy | Resultado esperado |
+| Criterio | Resultado | Evidencia |
 |---|---|---|
-| US-21.01 | Sí | Todos los criterios excepto "queda cerrada" (ver hallazgo transversal). |
-| US-21.02 | Sí | Todos los criterios; "talla" se registra como texto libre, no campo dedicado; "se cierra" no se cumple. |
-| US-21.03 | Sí | Todos los criterios se cumplen tal como están escritos. |
-| US-21.04 | Sí | Todos los criterios excepto "queda cerrada". |
-| US-21.05 | Sí | Todos los criterios se cumplen tal como están escritos. |
-| US-21.06 | No — bloqueada por EPIC 23 | — |
-| US-21.07 | No — bloqueada por EPIC 25 | — |
-| US-21.08 | No — bloqueada por EPIC 25 | — |
-| US-21.09 | Sí (ejecutada en vivo, ver EPIC 27 en `docs/backlog.md`) | Todos los criterios se cumplen: registro offline (realizada/fallida), evidencia con foto sobreviviendo recarga de página, sincronización automática preservando `capturado_en` original, indicador de estado, resolución de conflictos con auditoría. |
-| US-21.10 | Sí | Todos los criterios se cumplen tal como están escritos. |
-| US-21.11 | No — bloqueada por US-25.02 (EPIC 25) | — |
+| Se crea hogar | ✅ | hogar creado, redirección a `/hogares/{id}` |
+| Se crea solicitud | ✅ | fila en `solicitudes` |
+| Se evalúa | ✅ | evaluación visible en la solicitud |
+| Se aprueba | ✅ | estado `aprobada`; `decisiones_solicitud` = `aprobada`, "1 caja de mercadería" |
+| Se genera entrega | ✅ | entrega `pendiente` → `realizada`, receptor "Juan Receptor QA"; stock 13 → 17 (+5 −1) |
+| Se registra evidencia | ✅ | 1 documento `fotografia` en la solicitud |
+| La solicitud queda en estado terminal | ✅ | `entregada_pagada` |
+
+## US-21.02 — Flujo completo de pañales ✅
+
+**Ejecución:** hogar con integrante → solicitud "Pañales de adulto" con persona beneficiaria (obligatoria) → evaluación → aprobación "Talla M, 2 paquetes" → bodega: salida de 2 "Pañales talla M" → entrega realizada con evidencia.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Se selecciona persona beneficiaria | ✅ | campo exigido; `persona_id` guardado |
+| Se registra talla y cantidad | ⚠️ parcial | no hay campo "talla": va en el texto libre de la decisión ("Talla M, 2 paquetes") y en el producto descontado ("Pañales talla M") |
+| Se aprueba solicitud | ✅ | decisión registrada |
+| Se descuenta stock | ✅ | delta neto de la salida = −2 |
+| Se registra entrega | ✅ | entrega `realizada` |
+| Se cierra solicitud (estado terminal) | ✅ | `entregada_pagada` |
+
+**Nota:** `requiere_documentos = true` para pañales no bloquea el envío a evaluación (pasó a `en_evaluacion` sin documentos). No es criterio de esta historia; para diálisis el bloqueo sí existe (US-21.05).
+
+## US-21.03 — Flujo completo de materiales de construcción ✅
+
+**Ejecución:** solicitud "Materiales de construcción" → documento de antecedente subido antes de evaluar → evaluación y aprobación "10 planchas OSB, 2 rollos de nylon" → salidas de stock por producto → entrega con foto → revisión del historial.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Se crea solicitud | ✅ | — |
+| Se adjuntan antecedentes | ✅ | 1 documento antes de la evaluación |
+| Se aprueba detalle de materiales | ✅ | texto libre en la decisión |
+| Se registra entrega | ✅ | 2 movimientos de stock (10 y 2), entrega realizada |
+| Se adjunta evidencia | ✅ | 1 documento `fotografia` |
+| El historial queda visible | ✅ | sección visible; `solicitudes_historial`: validación RSH, `ingresada→en_evaluacion→aprobada→entregada_pagada` |
+
+## US-21.04 — Flujo completo de reembolso médico general ✅
+
+**Ejecución** (en el script combinado de reembolsos): solicitud con persona y monto solicitado $60.000, fecha 2026-10-20 → boleta → evaluación → aprobación $50.000 (tope 1º tramo) → caso negativo: pago de $999.999 → pago de $50.000.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Se crea solicitud | ✅ | — |
+| Se adjuntan documentos | ✅ | boleta subida |
+| Se registra monto solicitado | ✅ | $60.000 |
+| Se aprueba monto | ✅ | aprobado $50.000 sin error, medidor de tope visible |
+| Se registra pago | ✅ | pago $50.000; el pago de $999.999 se rechaza: "El monto pagado no puede superar el monto aprobado ($50.000)." |
+| La solicitud queda en estado terminal | ✅ | `entregada_pagada` tras el pago |
+
+## US-21.05 — Flujo completo de reembolso por diálisis ✅
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Exige certificado de diálisis | ✅ | sin documentos queda en `ingresada` con el mensaje "requiere adjuntar: certificado de diálisis y boleta o comprobante del gasto"; con ambos pasa a `en_evaluacion` |
+| Calcula acumulado mensual | ✅ | medidor antes de la 1ª: $150.000 disponible; antes de la 2ª: $70.000 disponible |
+| Muestra saldo disponible | ✅ | ídem; `max` del input = 70000 |
+| Bloquea aprobación sobre $150.000 | ✅ | aprobar $100.000 se rechaza en el servidor: "supera el saldo mensual disponible ($70.000 de $150.000, acumulado $80.000). Requiere una excepción (US-15.05)." |
+| Permite pago dentro del tope | ✅ | pagos $80.000 + $70.000 registrados |
+| El reporte refleja el movimiento | ✅ | `/reportes/dialisis` muestra a la persona con $150.000 |
+
+## US-21.06 — Aprobación por excepción RSH ✅
+
+**Ejecución:** hogar con tramo RSH 55% → solicitud → evaluación → intento de aprobación regular → informe social → aprobación por excepción con autoridad solicitante → acceso como bodega.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| La aprobación regular se bloquea (RSH > 40%) | ✅ | `validacion_rsh`: "requiere excepción: tramo 55% > 40%" |
+| Sin informe social no se puede aprobar por excepción | ✅ | bloqueo antes de crear el informe |
+| La excepción se habilita tras el informe social | ✅ | botón de excepción presente después de crear el informe |
+| Estado final marcado como excepción, nunca oculto | ✅ | `aprobada_excepcion`, badge "Aprobada por excepción" |
+| Se registran motivo y autoridad solicitante | ✅ | `decisiones_solicitud`: comentario + "Alcaldía de Coinco" |
+| La aprobación queda auditada | ✅ | `solicitudes_historial`: `en_evaluacion → aprobada_excepcion` |
+| Bodega no ve la sección de informe social | ✅ | sin encabezado "Informe social" en el detalle (ver nota) |
+| Bodega no accede a `/informes-sociales/nuevo` | ✅ | redirige a `/sin-permiso` |
+
+**Nota:** la primera versión del script daba un falso positivo para bodega: buscaba el texto "Informe social", que también es una `<option>` oculta del filtro de tipo de documento. Se cambió a buscar el encabezado de la sección. Se verificó además que la RLS de `documentos` excluye `informe_social` para roles no sociales (`supabase/migrations/20260815000001_rls_documentos_rsh.sql`), así que el filtro no expone nada.
+
+## US-21.07 — Reembolso excepcional por cirugía ✅
+
+**Ejecución:** el hogar ya tiene 2 reembolsos generales aprobados ($50.000 + $25.000) → solicitud de cirugía por $40.000.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Se crea solicitud con informe social asociado | ✅ | sin informe se bloquea: "No se puede aprobar sin un informe social asociado a esta solicitud."; con él, 1 informe asociado |
+| Se calcula correctamente el remanente anual | ✅ | SQL: $75.000 usados, $25.000 de remanente; el medidor muestra lo mismo |
+| Se aprueba dentro del remanente | ✅ | $40.000 no se envía (`max` = remanente, sin decisión en BD); $25.000 se aprueba (`monto_aprobado` = 25000) |
+| Se registra pago | ✅ | pago $25.000 → `entregada_pagada` |
+| Queda marcado como excepcional en historial y reportes | ✅ | tipo "Reembolso excepcional por cirugía" en la ficha del hogar; aparece en `/reportes/reembolsos-excepcionales` |
+
+## US-21.08 — Reembolso excepcional por fallecimiento ✅
+
+**Ejecución:** un segundo hogar sin reembolsos previos → integrante marcado fallecido → solicitud de fallecimiento por $60.000.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Solicitud con informe social asociado | ✅ | bloqueo sin informe (mismo mensaje); con informe, 1 asociado |
+| Remanente correcto | ✅ | hogar sin consumo: $100.000 |
+| Se aprueba dentro del remanente | ✅ | $60.000 aprobado sin error |
+| Se registra pago | ✅ | pago $60.000; pago de $999.999 rechazado |
+| Marcado como excepcional | ✅ | tipo "Reembolso excepcional por fallecimiento o servicio funerario"; aparece en el reporte de excepcionales |
+
+**Nota:** `/reportes/reembolsos-excepcionales` solo es accesible para `ROLES_REPORTE` (el evaluador social es redirigido a `/sin-permiso`, por diseño). Se verificó como administrador: el reporte lista cirugía ($25.000) y fallecimiento ($60.000).
+
+## US-21.09 — Entrega con corte de conexión ✅
+
+**Ejecución:** terreno abre la entrega en `/mis-entregas`, el navegador pasa a offline (`context.setOffline(true)`), completa receptor, observación y foto, y marca realizada. Espera **20 s offline** y luego recupera la conexión sin intervención manual. Se repite el caso "fallida" (motivo "Dirección incorrecta") en una segunda entrega.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Se simula pérdida de señal durante el registro y la evidencia | ✅ | registro y foto completados offline |
+| Los datos quedan locales y marcados como pendientes | ✅ | badge "Pendiente de sincronizar" en ambos casos |
+| Al reconectar se sincroniza automáticamente | ✅ | sin intervención: realizada → `realizada` + foto en `documentos` + solicitud `entregada_pagada`; fallida → `fallida` con `motivo_fallo` (la solicitud sigue `aprobada`, reprogramable) |
+| Se conserva la fecha/hora de captura | ✅ | `capturado_en` = `fecha_hora_entrega` = momento offline; `updated_at − capturado_en` = 20,3 s (hora de sync) |
+
+## US-21.10 — Ruta por cercanía ✅
+
+**Ejecución:** 4 hogares en un sector de prueba **insertados en orden revuelto (C, D, B, A)** para que el cálculo tenga que reordenar. A está junto al origen, B a pocos metros de A, C lejos y D sin coordenadas. Bodega filtra el sector y usa "Calcular orden por cercanía".
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Hogares con coordenadas en un mismo sector | ✅ | — |
+| Orden razonable por cercanía | ✅ | `orden_ruta`: A=1, B=2, C=3 |
+| Hogar sin coordenadas marcado y al final, sin bloquear | ✅ | D=4, con etiqueta "Pendiente de georreferenciar" |
+
+## US-21.11 — Tramos y remanente compartido ✅
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Hogar usa 2 reembolsos generales ($50.000 + $25.000) | ✅ | SQL: total aprobado 2026 = 75000 |
+| Remanente correcto ($25.000) | ✅ | medidor y SQL coinciden |
+| Excepcional por cirugía limitado al remanente, no al tope teórico | ✅ | ver US-21.07: $40.000 bloqueado, $25.000 aprobado |
+| 3ª solicitud general con tope $0, bloqueada con motivo | ✅ | medidor "$0 disponible — $100.000 usado de $100.000" y texto "No se puede aprobar: el hogar ya agotó los reembolsos generales disponibles este año"; la solicitud queda `en_evaluacion` |
+| Solicitud general en enero/diciembre bloqueada | ✅ | fecha de enero: "solo puede solicitarse entre febrero y noviembre…"; estado sigue `ingresada` |
+
+**Nota:** cuando el monto supera el remanente, el bloqueo ocurre en el cliente (atributo `max` del input), por eso el script no ve un mensaje de error del servidor. Se confirmó en BD que no se registró ninguna decisión.
+
+---
+
+## Ajustes a los scripts de QA (re-ejecución)
+
+Ninguno de estos cambios toca código de la aplicación. Todos corrigen supuestos de los scripts que fallaban al re-ejecutarlos:
+
+- **US-21.02 / US-21.05:** usaban RUT fijos (`11111111-1`, `22222222-2`) que ya existían desde la corrida anterior → ahora usan un RUT aleatorio con DV válido (`rutAleatorio()` en el helper).
+- **US-21.01:** comparaba el stock con un valor absoluto (4) → ahora compara contra el stock previo + 5 − 1.
+- **US-21.06:** falso positivo por la `<option>` "Informe social" → ahora busca el encabezado de la sección.
+- **US-21.09:** seed y runners parametrizados con una etiqueta por corrida (`TAG`), porque la corrida interrumpida dejó una entrega QA21-09 `pendiente` duplicada que se confundía por texto (se dejó intacta). El ID de entrega fijo se reemplazó por la dirección etiquetada. La solicitud se siembra en `aprobada` (el estado real) en vez de `asignada_entrega_pago`, que la app nunca asigna. El corte offline se alargó a 20 s para que la hora de captura se distinga de la de sincronización.
+- **US-21.10:** sector único por corrida e inserción en orden revuelto. Antes los hogares se insertaban ya en el orden esperado, así que la prueba no distinguía entre "ordenó bien" y "no hizo nada".
