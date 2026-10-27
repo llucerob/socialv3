@@ -81,10 +81,13 @@ export function SelectorCoordenadas({
   latitud,
   longitud,
   onCambiar,
+  alto = '320px',
 }: {
   latitud: number | null
   longitud: number | null
   onCambiar: (lat: number, lng: number) => void
+  // Cualquier valor CSS de altura — Leaflet necesita un alto explícito.
+  alto?: string
 }) {
   const tienePunto = latitud !== null && longitud !== null && !Number.isNaN(latitud) && !Number.isNaN(longitud)
   const centro: [number, number] = tienePunto ? [latitud, longitud] : CENTRO_COINCO
@@ -94,7 +97,7 @@ export function SelectorCoordenadas({
       <MapContainer
         center={centro}
         zoom={tienePunto ? ZOOM_CON_COORDENADAS : ZOOM_SIN_COORDENADAS}
-        style={{ height: '320px', width: '100%' }}
+        style={{ height: alto, width: '100%' }}
         className="rounded border border-black/10 dark:border-white/20"
       >
         <CapaBase />
