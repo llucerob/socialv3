@@ -1,5 +1,6 @@
 import { requireRole } from '@/lib/auth/dal'
 import { listarMisEntregas } from '@/lib/entregas/dal'
+import { tieneRol } from '@/lib/auth/roles'
 import { listarMotivosEntregaFallidaActivos } from '@/lib/motivos-entrega/dal'
 import { MisEntregasOffline } from './mis-entregas-offline'
 
@@ -17,8 +18,11 @@ const ROLES_TERRENO = ['administrador', 'terreno_repartidor'] as const
 // misma carga en IndexedDB para seguir funcionando si se corta la señal
 // después de este punto.
 export default async function MisEntregasPage() {
-  await requireRole([...ROLES_TERRENO])
-  const [entregas, motivos] = await Promise.all([listarMisEntregas(), listarMotivosEntregaFallidaActivos()])
+  const profile = await requireRole([...ROLES_TERRENO])
+  const [entregas, motivos] = await Promise.all([
+    listarMisEntregas(profile.id, tieneRol(profile, ['administrador'])),
+    listarMotivosEntregaFallidaActivos(),
+  ])
 
   return <MisEntregasOffline entregasIniciales={entregas} motivosIniciales={motivos} />
 }

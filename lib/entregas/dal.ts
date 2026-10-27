@@ -83,15 +83,25 @@ export async function listarEntregas(): Promise<EntregaConContexto[]> {
   return resolverResponsables(supabase, filas)
 }
 
-// US-12.03: "el funcionario ve solo sus entregas" — la RLS ya filtra por
-// responsable_id = auth.uid() para terreno_repartidor; esta función asume
-// que quien la llama es ese rol (o administrador, que ve todo igual).
-export async function listarMisEntregas(): Promise<EntregaConContexto[]> {
+// US-12.03: "el funcionario ve solo sus entregas". Con un solo rol la RLS
+// bastaba (terreno_repartidor solo lee responsable_id = auth.uid()), pero
+// con roles múltiples un usuario de terreno que además es de bodega lee
+// todas las entregas por RLS, y "Mis entregas", "Rutas" y la caché offline
+// le mostrarían las de todos. Por eso el filtro va explícito, salvo para el
+// administrador, que sigue viendo todas (verEntregasDeTodos).
+export async function listarMisEntregas(
+  usuarioId: string,
+  verEntregasDeTodos: boolean
+): Promise<EntregaConContexto[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let consulta = supabase
     .from('entregas')
     .select(SELECT_CON_CONTEXTO)
     .order('fecha_programada', { ascending: true, nullsFirst: false })
+  if (!verEntregasDeTodos) {
+    consulta = consulta.eq('responsable_id', usuarioId)
+  }
+  const { data, error } = await consulta
 
   if (error) throw error
   const filas = (data as unknown as FilaConContexto[]).map(mapearConContexto)

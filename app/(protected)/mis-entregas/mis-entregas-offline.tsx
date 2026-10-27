@@ -10,6 +10,7 @@ import {
   listarRutaDelDia,
   guardarMotivosFallo,
   listarMotivosFalloCache,
+  esAtrasada,
   type EntregaLocal,
 } from '@/lib/offline/db'
 import { enviarOEncolar, iniciarSincronizacionAutomatica, suscribirseSync } from '@/lib/offline/sync'
@@ -19,6 +20,7 @@ import { IndicadorSincronizacion } from './sync-indicator'
 import { Card } from '@/components/ui/Card'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { formatearFecha } from '@/lib/fechas'
+import { Button, ButtonExterno } from '@/components/ui/Button'
 
 // EPIC 27 (US-27.06) — chip de "pendiente de sincronizar" por entrega,
 // distinto del indicador global (IndicadorSincronizacion, contador de la
@@ -29,6 +31,16 @@ function BadgePendienteSync() {
   return (
     <span className="rounded-full bg-warning-bg px-2 py-0.5 text-xs whitespace-nowrap text-warning-fg">
       Pendiente de sincronizar
+    </span>
+  )
+}
+
+// Entrega pendiente de un día anterior (ver esAtrasada en lib/offline/db.ts):
+// se muestra en la ruta del día, marcada para que el repartidor la priorice.
+function BadgeAtrasada() {
+  return (
+    <span className="rounded-full bg-danger-bg px-2 py-0.5 text-xs font-medium whitespace-nowrap text-danger-fg">
+      Atrasada
     </span>
   )
 }
@@ -134,7 +146,7 @@ export function MisEntregasOffline({
       </div>
 
       {entregas.length === 0 ? (
-        <p className="text-sm text-text-muted">No tienes entregas asignadas para hoy.</p>
+        <p className="text-sm text-text-muted">No tienes entregas asignadas para hoy ni entregas atrasadas.</p>
       ) : (
         <ul className="space-y-3">
           {entregas.map((entrega) => (
@@ -143,6 +155,7 @@ export function MisEntregasOffline({
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-base font-medium text-text-primary">{entrega.tipo_ayuda_nombre}</span>
                   <div className="flex shrink-0 items-center gap-2">
+                    {esAtrasada(entrega) && <BadgeAtrasada />}
                     {entrega.estado_local === 'pendiente_sincronizar' && <BadgePendienteSync />}
                     <EstadoBadge estado={entrega.estado} />
                   </div>
@@ -155,17 +168,19 @@ export function MisEntregasOffline({
                 {entrega.fecha_programada && (
                   <p className="mt-1 text-sm text-text-muted">Programada: {formatearFecha(entrega.fecha_programada)}</p>
                 )}
-                <div className="mt-3 flex items-center gap-4 text-sm">
-                  <button
+                {/* US-20.01: acciones principales de cada parada con tamaño de
+                    botón (44px), no enlaces de texto, para tocarlas con el dedo. */}
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <Button
                     type="button"
+                    className="flex-1"
                     onClick={() => setVista({ tipo: 'detalle', entregaId: entrega.id })}
-                    className="font-medium text-brand-600 hover:underline"
                   >
                     Ver detalle
-                  </button>
-                  <a href={enlaceMapa(entrega)} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">
+                  </Button>
+                  <ButtonExterno href={enlaceMapa(entrega)} className="flex-1">
                     Abrir en mapas
-                  </a>
+                  </ButtonExterno>
                 </div>
               </Card>
             </li>
@@ -189,9 +204,9 @@ function DetalleEntrega({
 }) {
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <button type="button" onClick={onVolver} className="text-sm text-brand-600 hover:underline">
+      <Button type="button" variante="ghost" onClick={onVolver} className="-ml-3">
         ← Volver a la ruta
-      </button>
+      </Button>
 
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -201,17 +216,13 @@ function DetalleEntrega({
             {entrega.grupo_familiar_sector && ` · ${entrega.grupo_familiar_sector}`}
           </p>
           {entrega.persona_nombre && <p className="text-sm text-text-muted">{entrega.persona_nombre}</p>}
-          <p className="mt-2">
+          <p className="mt-2 flex items-center gap-2">
             <EstadoBadge estado={entrega.estado} />
+            {esAtrasada(entrega) && <BadgeAtrasada />}
           </p>
-          <a
-            href={enlaceMapa(entrega)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-block text-sm text-brand-600 hover:underline"
-          >
+          <ButtonExterno href={enlaceMapa(entrega)} className="mt-3">
             Abrir en mapas
-          </a>
+          </ButtonExterno>
         </div>
         {entrega.estado_local === 'pendiente_sincronizar' && (
           <span className="shrink-0">

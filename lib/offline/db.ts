@@ -2,6 +2,7 @@
 
 import type { EntregaConContexto } from '@/lib/entregas/types'
 import type { MotivoEntregaFallida } from '@/lib/motivos-entrega/types'
+import { fechaHoyChile } from '@/lib/fechas'
 
 // EPIC 27 — capa de persistencia local para el modo offline de terreno.
 // IndexedDB nativo (sin dependencia nueva: la superficie que se necesita —
@@ -76,17 +77,24 @@ export async function listarRutaDelDia(): Promise<EntregaLocal[]> {
   const db = await abrirDb()
   const tx = db.transaction(STORE_RUTA, 'readonly')
   const filas = await pedir(tx.objectStore(STORE_RUTA).getAll())
-  return filas as EntregaLocal[]
+  return ordenarRutaDelDia(filas as EntregaLocal[])
 }
 
 // US-27.02: "la ruta cacheada se limita a la jornada/día en curso" — se
-// guarda solo lo programado para hoy, o sin fecha todavía (backlog sin
-// programar no es "un día futuro ni anterior"). Preserva `estado_local` de
+// guarda lo programado para hoy, lo que no tiene fecha todavía (backlog sin
+// programar no es "un día futuro ni anterior") y las entregas atrasadas: las
+// de días anteriores que siguen pendientes. Decisión 2026-10-27: una entrega
+// atrasada sigue siendo trabajo del día y no puede desaparecer de la vista
+// del repartidor (antes solo la mostraba /rutas); se marca como "Atrasada"
+// (ver esAtrasada). Lo ya realizado o fallido de días anteriores no entra.
+// Preserva `estado_local` de
 // cualquier entrega que siga con una escritura pendiente de sincronizar,
 // para no perder ese aviso si la lista se recarga antes de que sincronice.
 export async function guardarRutaDelDia(entregas: EntregaConContexto[]): Promise<EntregaLocal[]> {
-  const hoy = new Date().toISOString().slice(0, 10)
-  const deHoy = entregas.filter((e) => !e.fecha_programada || e.fecha_programada === hoy)
+  const hoy = fechaHoyChile()
+  const deHoy = entregas.filter(
+    (e) => !e.fecha_programada || e.fecha_programada === hoy || esAtrasada(e, hoy)
+  )
 
   const anteriores = await listarRutaDelDia()
   const anterioresPorId = new Map(anteriores.map((e) => [e.id, e]))
@@ -110,7 +118,7 @@ export async function guardarRutaDelDia(entregas: EntregaConContexto[]): Promise
   })
 
   await completarTx(tx)
-  return resultado
+  return ordenarRutaDelDia(resultado)
 }
 
 export async function marcarEntregaLocal(
@@ -184,4 +192,25 @@ export async function listarMotivosFalloCache(): Promise<MotivoEntregaFallida[]>
   const tx = db.transaction(STORE_MOTIVOS, 'readonly')
   const filas = await pedir(tx.objectStore(STORE_MOTIVOS).getAll())
   return filas as MotivoEntregaFallida[]
+}
+
+// Entrega pendiente cuya fecha programada ya pasó.
+export function esAtrasada(
+  entrega: { estado: string; fecha_programada: string | null },
+  hoy: string = fechaHoyChile()
+): boolean {
+  return entrega.estado === 'pendiente' && entrega.fecha_programada !== null && entrega.fecha_programada < hoy
+}
+
+// IndexedDB devuelve las filas por clave (id), no por fecha: se ordena
+// explícitamente, primero las atrasadas (las que más urgen) y luego por
+// fecha programada; sin fecha al final.
+function ordenarRutaDelDia(entregas: EntregaLocal[]): EntregaLocal[] {
+  const hoy = fechaHoyChile()
+  return [...entregas].sort((a, b) => {
+    const atrasoA = esAtrasada(a, hoy) ? 0 : 1
+    const atrasoB = esAtrasada(b, hoy) ? 0 : 1
+    if (atrasoA !== atrasoB) return atrasoA - atrasoB
+    return (a.fecha_programada ?? '9999-12-31').localeCompare(b.fecha_programada ?? '9999-12-31')
+  })
 }

@@ -5,6 +5,7 @@ import type { IncidenteFormState } from '@/lib/incidentes/actions'
 import { TIPOS_INCIDENTE, TIPO_INCIDENTE_LABELS } from '@/lib/incidentes/types'
 import type { Usuario } from '@/lib/usuarios/types'
 import { Button } from '@/components/ui/Button'
+import { fechaHoyChile } from '@/lib/fechas'
 
 type IncidenteFormAction = (state: IncidenteFormState, formData: FormData) => Promise<IncidenteFormState>
 
@@ -28,7 +29,7 @@ export function IncidenteForm({ action, usuarios }: { action: IncidenteFormActio
           id="fecha_incidente"
           name="fecha_incidente"
           required
-          defaultValue={valores?.fecha_incidente ?? new Date().toISOString().slice(0, 10)}
+          defaultValue={valores?.fecha_incidente ?? fechaHoyChile()}
           className={claseCampo}
         />
       </div>

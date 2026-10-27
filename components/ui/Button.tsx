@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react'
 import Link, { type LinkProps } from 'next/link'
 
 // Sistema de diseño Coinco — variantes de botón sobre tokens de globals.css.
@@ -50,4 +50,16 @@ export type BotonEnlaceProps = LinkProps & {
 
 export function ButtonLink({ variante = 'primary', className = '', ...props }: BotonEnlaceProps) {
   return <Link className={clasesBoton(variante, className)} {...props} />
+}
+
+// Enlace a otra aplicación (ej. "Abrir en mapas" en terreno), con el mismo
+// tamaño y estilo de botón: en un teléfono es la acción principal de cada
+// parada y un enlace de texto de 20px es difícil de tocar (US-20.01). Abre
+// en otra pestaña/app para no perder la ruta cargada (y su caché offline).
+export type BotonExternoProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
+  variante?: VarianteBoton
+}
+
+export function ButtonExterno({ variante = 'secondary', className = '', ...props }: BotonExternoProps) {
+  return <a target="_blank" rel="noopener noreferrer" className={clasesBoton(variante, className)} {...props} />
 }

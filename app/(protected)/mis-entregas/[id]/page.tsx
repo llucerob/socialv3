@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { requireRole } from '@/lib/auth/dal'
+import { tieneRol } from '@/lib/auth/roles'
 import { obtenerEntrega } from '@/lib/entregas/dal'
 import { registrarEntregaRealizada, registrarEntregaFallida } from '@/lib/entregas/actions'
 import { obtenerSolicitud } from '@/lib/solicitudes/dal'
@@ -10,23 +11,25 @@ import { EntregaRealizadaForm } from '../entrega-realizada-form'
 import { EntregaFallidaForm } from '../entrega-fallida-form'
 import { Card } from '@/components/ui/Card'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { ButtonExterno } from '@/components/ui/Button'
 
 const ROLES_TERRENO = ['administrador', 'terreno_repartidor'] as const
 
 // US-12.04/US-12.05/US-12.07: detalle de una entrega asignada, con las
-// acciones para registrar el resultado. La RLS de entregas ya impide que un
-// funcionario de terreno vea una entrega que no es suya (obtenerEntrega
-// devuelve null en ese caso, igual que si no existiera).
+// acciones para registrar el resultado. Un funcionario de terreno solo abre
+// las entregas asignadas a él: la RLS lo garantiza con un solo rol, y el
+// chequeo explícito de abajo lo mantiene cuando además tiene un rol que lee
+// todas las entregas (por ejemplo bodega). El administrador abre cualquiera.
 export default async function MiEntregaPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireRole([...ROLES_TERRENO])
+  const profile = await requireRole([...ROLES_TERRENO])
   const { id } = await params
   const entrega = await obtenerEntrega(id)
 
-  if (!entrega) {
+  if (!entrega || (!tieneRol(profile, ['administrador']) && entrega.responsable_id !== profile.id)) {
     notFound()
   }
 
@@ -53,9 +56,9 @@ export default async function MiEntregaPage({
         <p className="mt-2 flex items-center gap-2">
           <EstadoBadge estado={entrega.estado} />
         </p>
-        <a href={enlaceMapa(entrega)} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-brand-600 hover:underline">
+        <ButtonExterno href={enlaceMapa(entrega)} className="mt-3">
           Abrir en mapas
-        </a>
+        </ButtonExterno>
       </div>
 
       {entrega.estado === 'pendiente' && (

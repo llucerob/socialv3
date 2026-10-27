@@ -7,6 +7,7 @@ import type { TipoAyuda } from '@/lib/ayudas/types'
 import { ESTADO_PERSONA_LABELS, type Persona } from '@/lib/personas/types'
 import { NOMBRE_TIPO_AYUDA_REEMBOLSO_FALLECIMIENTO } from '@/lib/reembolsos/tramos'
 import { Button } from '@/components/ui/Button'
+import { fechaHoyChile } from '@/lib/fechas'
 
 type SolicitudFormAction = (
   state: SolicitudFormState,
@@ -128,7 +129,7 @@ export function SolicitudForm({
           defaultValue={
             valores?.fecha_solicitud ??
             defaultValues?.fecha_solicitud ??
-            new Date().toISOString().slice(0, 10)
+            fechaHoyChile()
           }
           className={claseCampo}
         />

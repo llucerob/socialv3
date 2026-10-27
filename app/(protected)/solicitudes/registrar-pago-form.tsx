@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { PagoReembolsoFormState } from '@/lib/reembolsos/actions'
 import { Button } from '@/components/ui/Button'
+import { fechaHoyChile } from '@/lib/fechas'
 
 type RegistrarPagoFormAction = (
   state: PagoReembolsoFormState,
@@ -24,7 +25,7 @@ export function RegistrarPagoForm({ action }: { action: RegistrarPagoFormAction 
           name="fecha_pago"
           type="date"
           required
-          defaultValue={valores?.fecha_pago ?? new Date().toISOString().slice(0, 10)}
+          defaultValue={valores?.fecha_pago ?? fechaHoyChile()}
           className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
         />
       </div>

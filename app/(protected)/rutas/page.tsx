@@ -1,8 +1,9 @@
 import { requireRole } from '@/lib/auth/dal'
 import { listarMisEntregas } from '@/lib/entregas/dal'
+import { tieneRol } from '@/lib/auth/roles'
 import { ordenarParaRuta } from '@/lib/rutas/geo'
 import { enlaceMapa } from '@/lib/rutas/mapas'
-import { ButtonLink } from '@/components/ui/Button'
+import { ButtonExterno, ButtonLink } from '@/components/ui/Button'
 import { ParadaRuta } from '@/components/ui/ParadaRuta'
 import { GeorreferenciacionBadge } from '../hogares/georreferenciacion-badge'
 
@@ -15,8 +16,8 @@ const ROLES = ['administrador', 'terreno_repartidor'] as const
 // /mis-entregas/[id] (EPIC 12), para no duplicar esos formularios en dos
 // lugares.
 export default async function RutasPage() {
-  await requireRole([...ROLES])
-  const entregas = await listarMisEntregas()
+  const profile = await requireRole([...ROLES])
+  const entregas = await listarMisEntregas(profile.id, tieneRol(profile, ['administrador']))
   const pendientes = ordenarParaRuta(entregas.filter((entrega) => entrega.estado === 'pendiente'))
 
   const porSector = new Map<string, typeof pendientes>()
@@ -58,14 +59,9 @@ export default async function RutasPage() {
                   <ButtonLink href={`/mis-entregas/${entrega.id}`} variante="secondary" className="px-3 py-1.5 text-xs">
                     Ver
                   </ButtonLink>
-                  <a
-                    href={enlaceMapa(entrega)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-brand-600 hover:underline"
-                  >
+                  <ButtonExterno href={enlaceMapa(entrega)} variante="ghost" className="px-3 py-1.5 text-xs">
                     Mapa
-                  </a>
+                  </ButtonExterno>
                 </ParadaRuta>
               ))}
             </ol>
