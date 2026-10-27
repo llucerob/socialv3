@@ -610,3 +610,14 @@ Al terminar este backlog MVP, el sistema permitirá, además de todo lo ya cubie
 - Cualquier usuario con sesión, sea cual sea su rol, llega a "Mi cuenta" desde la barra superior.
 - Para cambiarla pide la contraseña actual, la nueva (mínimo 8 caracteres, distinta de la actual) y su confirmación. Si la actual es incorrecta no cambia nada.
 - Solo cambia la contraseña de quien tiene la sesión; no hay forma de cambiar la de otro usuario desde esta pantalla.
+
+### MR-04 ✅ — Ficha del grupo familiar ordenada en pestañas
+**Relacionada con:** US-03.02, US-03.04, US-04.01, US-10.01, US-22.02, US-23.02.
+**Pedido:** la ficha social debe estar más ordenada; con todo el expediente en una sola pantalla no se entiende qué es cada cosa. Debe tener pestañas o ventanas para ordenar la información.
+**Criterios de aceptación:**
+- Siempre visibles, sobre las pestañas: cabecera del hogar (dirección, sector, estado, acciones), aviso de excepción RSH, aviso de hogar inactivo y los indicadores (integrantes, tramo RSH, ayudas del año). Las excepciones no quedan escondidas en una pestaña.
+- Pestañas: **Datos del hogar** (datos y, para quien corresponde, historial de cambios críticos) · **Integrantes** · **Solicitudes y ayudas** (solicitudes asociadas y ayudas entregadas) · **Seguimiento social** (hitos e informes sociales) · **Documentos**. Cada una muestra su cantidad.
+- **Seguimiento social** solo aparece para los roles que hoy ven hitos o informes (evaluador social, aprobador, administrador), marcada como información sensible; si otro rol escribe la URL a mano ve "Datos del hogar".
+- La pestaña activa queda en la URL (`?tab=`), así se puede enlazar, recargar y volver atrás. Los filtros de hitos y de documentos se mantienen en su pestaña, y al registrar un integrante, hito o informe se vuelve a la pestaña correspondiente.
+- En móvil la barra de pestañas se desplaza horizontalmente sin generar scroll horizontal en la página.
+- No cambian consultas, permisos ni acciones existentes.

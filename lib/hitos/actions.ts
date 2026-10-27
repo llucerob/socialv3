@@ -65,7 +65,7 @@ export async function registrarHito(
   }
 
   revalidatePath(`/hogares/${grupoFamiliarId}`)
-  redirect(`/hogares/${grupoFamiliarId}`)
+  redirect(`/hogares/${grupoFamiliarId}?tab=seguimiento`)
 }
 
 function leerCampos(formData: FormData): ValoresHitoFormulario {

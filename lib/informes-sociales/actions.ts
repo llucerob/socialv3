@@ -104,5 +104,5 @@ export async function crearInformeSocial(
   if (campos.solicitud_id) {
     revalidatePath(`/solicitudes/${campos.solicitud_id}`)
   }
-  redirect(`/hogares/${grupoFamiliarId}`)
+  redirect(`/hogares/${grupoFamiliarId}?tab=seguimiento`)
 }

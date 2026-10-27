@@ -26,6 +26,7 @@ import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
 import { etiquetaReembolsoExcepcional } from '@/lib/reembolsos/tramos'
 import { BannerSensible } from '@/components/ui/BannerSensible'
+import { Pestanas, type Pestana } from '@/components/ui/Pestanas'
 import { formatearFecha } from '@/lib/fechas'
 import { tieneRol } from '@/lib/auth/roles'
 import type { RolUsuario } from '@/lib/auth/types'
@@ -43,6 +44,7 @@ const ROLES_VER_HOGAR: RolUsuario[] = [
   'auditor_consulta',
 ] as const
 const ROLES_VEN_HISTORIAL: RolUsuario[] = ['administrador', 'evaluador_social']
+type PestanaFicha = 'datos' | 'integrantes' | 'solicitudes' | 'seguimiento' | 'documentos'
 const ESTADOS_PERSONA: EstadoPersona[] = [
   'activo',
   'ya_no_pertenece_hogar',
@@ -55,10 +57,10 @@ export default async function FichaGrupoFamiliarPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tipo_documento?: string; tipo_hito?: string }>
+  searchParams: Promise<{ tipo_documento?: string; tipo_hito?: string; tab?: string }>
 }) {
   const { id } = await params
-  const { tipo_documento: tipoDocumentoParam, tipo_hito: tipoHitoParam } = await searchParams
+  const { tipo_documento: tipoDocumentoParam, tipo_hito: tipoHitoParam, tab: tabParam } = await searchParams
   const tipoFiltro = TIPOS_DOCUMENTO.includes(tipoDocumentoParam as TipoDocumento)
     ? (tipoDocumentoParam as TipoDocumento)
     : undefined
@@ -123,6 +125,38 @@ export default async function FichaGrupoFamiliarPage({
   // directo disponible es el propio tramo_rsh del hogar contra el umbral de
   // CLAUDE.md (`superaUmbralElegibilidad`, misma regla que aplica `aprobarSolicitud`), no un flag guardado.
   const tieneExcepcionRsh = superaUmbralElegibilidad(hogar.tramo_rsh)
+
+  // MR-04: pestañas de la ficha. "Seguimiento social" (hitos e informes,
+  // datos sensibles) solo existe para quien puede ver alguno de los dos; una
+  // pestaña desconocida o no permitida cae en "Datos del hogar".
+  const puedeVerSeguimiento = puedeVerHitos || puedeVerInformes
+  const hrefPestana = (pestana: PestanaFicha) =>
+    pestana === 'datos' ? `/hogares/${hogar.id}` : `/hogares/${hogar.id}?tab=${pestana}`
+  const pestanas: Pestana[] = [
+    { id: 'datos', label: 'Datos del hogar', href: hrefPestana('datos') },
+    { id: 'integrantes', label: 'Integrantes', href: hrefPestana('integrantes'), contador: integrantes.length },
+    {
+      id: 'solicitudes',
+      label: 'Solicitudes y ayudas',
+      href: hrefPestana('solicitudes'),
+      contador: solicitudes.length,
+    },
+    ...(puedeVerSeguimiento
+      ? [
+          {
+            id: 'seguimiento',
+            label: 'Seguimiento social',
+            href: hrefPestana('seguimiento'),
+            contador: todosLosHitos.length + informesSociales.length,
+            sensible: true,
+          },
+        ]
+      : []),
+    { id: 'documentos', label: 'Documentos', href: hrefPestana('documentos'), contador: documentos.length },
+  ]
+  const pestanaActiva: PestanaFicha = pestanas.some((p) => p.id === tabParam)
+    ? (tabParam as PestanaFicha)
+    : 'datos'
 
   return (
     <div className="space-y-8">
@@ -191,329 +225,354 @@ export default async function FichaGrupoFamiliarPage({
         </Card>
       </section>
 
-      <Card header={<h2 className="font-medium text-text-primary">Datos del hogar</h2>}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <h3 className="text-sm font-medium text-text-muted">Teléfono</h3>
-            <p className="text-text-primary">{hogar.telefono ?? '—'}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-text-muted">Fecha actualización RSH</h3>
-            <p className="text-text-primary">{formatearFecha(hogar.fecha_actualizacion_rsh)}</p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-text-muted">Coordenadas</h3>
-            <p className="flex items-center gap-2 text-text-primary">
-              <span>
-                {hogar.latitud !== null && hogar.longitud !== null
-                  ? `${hogar.latitud}, ${hogar.longitud}`
-                  : 'Sin registrar'}
-              </span>
-              <GeorreferenciacionBadge latitud={hogar.latitud} longitud={hogar.longitud} />
-            </p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-text-muted">Observaciones</h3>
-            <p className="whitespace-pre-wrap text-text-primary">{hogar.observaciones ?? '—'}</p>
-          </div>
-        </div>
-      </Card>
+      {/* MR-04: el expediente se ordena en pestañas; lo de arriba (cabecera,
+          avisos de excepción e inactividad, indicadores) queda siempre
+          visible para que una excepción nunca quede escondida. */}
+      <Pestanas pestanas={pestanas} activa={pestanaActiva} etiqueta="Secciones de la ficha del hogar" />
 
-      <section>
-        <div className="flex items-center justify-between">
-          <h2 className="font-medium text-text-primary">Integrantes</h2>
-          {puedeEditar && (
-            <ButtonLink href={`/hogares/${hogar.id}/integrantes/nuevo`} variante="secondary">
-              Agregar integrante
-            </ButtonLink>
-          )}
-        </div>
-
-        {integrantes.length === 0 ? (
-          <p className="mt-2 text-sm text-text-muted">Sin integrantes registrados todavía.</p>
-        ) : (
-          <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
-            {integrantes.map((persona) => {
-              const cambiarEstadoPersonaConIds = cambiarEstadoIntegrante.bind(
-                null,
-                persona.id,
-                hogar.id
-              )
-
-              return (
-                <li key={persona.id} className="flex items-center justify-between px-4 py-3">
-                  <div>
-                    <p className="font-medium text-text-primary">
-                      {persona.nombres} {persona.apellidos}
-                    </p>
-                    <p className="text-sm text-text-muted">
-                      {persona.rut} · {persona.parentesco}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {puedeEditar ? (
-                      <form action={cambiarEstadoPersonaConIds} className="flex items-center gap-2">
-                        <select
-                          name="estado"
-                          defaultValue={persona.estado}
-                          className="rounded-lg border border-border bg-transparent px-2 py-1 text-xs text-text-primary"
-                        >
-                          {ESTADOS_PERSONA.map((estado) => (
-                            <option key={estado} value={estado}>
-                              {ESTADO_PERSONA_LABELS[estado]}
-                            </option>
-                          ))}
-                        </select>
-                        <Button type="submit" variante="secondary" className="px-2 py-1 text-xs">
-                          Aplicar
-                        </Button>
-                      </form>
-                    ) : (
-                      <EstadoBadge estado={persona.estado} />
-                    )}
-                    {puedeEditar && (
-                      <Link
-                        href={`/hogares/${hogar.id}/integrantes/${persona.id}/editar`}
-                        className="rounded-lg border border-border px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-alt"
-                      >
-                        Editar
-                      </Link>
-                    )}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between">
-          <h2 className="font-medium text-text-primary">Solicitudes asociadas</h2>
-          {puedeEditar && hogar.estado === 'activo' && (
-            <ButtonLink href={`/hogares/${hogar.id}/solicitudes/nueva`} variante="secondary">
-              Nueva solicitud
-            </ButtonLink>
-          )}
-        </div>
-
-        {solicitudes.length === 0 ? (
-          <p className="mt-2 text-sm text-text-muted">Sin solicitudes registradas todavía.</p>
-        ) : (
-          <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
-            {solicitudes.map((solicitud) => (
-              <li key={solicitud.id}>
-                <Link
-                  href={`/solicitudes/${solicitud.id}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-surface-alt"
-                >
+      {pestanaActiva === 'datos' && (
+        <div className="space-y-8">
+          <Card header={<h2 className="font-medium text-text-primary">Datos del hogar</h2>}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <h3 className="text-sm font-medium text-text-muted">Teléfono</h3>
+                <p className="text-text-primary">{hogar.telefono ?? '—'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-text-muted">Fecha actualización RSH</h3>
+                <p className="text-text-primary">{formatearFecha(hogar.fecha_actualizacion_rsh)}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-text-muted">Coordenadas</h3>
+                <p className="flex items-center gap-2 text-text-primary">
                   <span>
-                    <span className="font-medium text-text-primary">{solicitud.tipo_ayuda_nombre}</span>
-                    {solicitud.persona_nombre && (
-                      <span className="ml-2 text-sm text-text-muted">{solicitud.persona_nombre}</span>
-                    )}
+                    {hogar.latitud !== null && hogar.longitud !== null
+                      ? `${hogar.latitud}, ${hogar.longitud}`
+                      : 'Sin registrar'}
                   </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    {etiquetaReembolsoExcepcional(solicitud.tipo_ayuda_nombre) && (
-                      <BadgeExcepcion texto={etiquetaReembolsoExcepcional(solicitud.tipo_ayuda_nombre)!} />
-                    )}
-                    <EstadoBadge estado={solicitud.estado} />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                  <GeorreferenciacionBadge latitud={hogar.latitud} longitud={hogar.longitud} />
+                </p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-text-muted">Observaciones</h3>
+                <p className="whitespace-pre-wrap text-text-primary">{hogar.observaciones ?? '—'}</p>
+              </div>
+            </div>
+          </Card>
 
-      {puedeVerHitos && (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-medium text-text-primary">Hitos</h2>
-            {puedeRegistrarHitos && (
-              <ButtonLink href={`/hogares/${hogar.id}/hitos/nuevo`} variante="secondary">
-                Registrar hito
-              </ButtonLink>
-            )}
-          </div>
-
-          <BannerSensible>
-            Información sensible — visible solo para evaluador social, aprobador y administrador.
-          </BannerSensible>
-
-          {/* US-22.02: "se puede filtrar por tipo de hito" — mismo patrón
-              sin JS que el filtro de documentos (?tipo_hito=...). Preserva
-              tipo_documento si estaba activo, para no borrarlo al filtrar. */}
-          <form className="flex items-center gap-2 text-sm">
-            {tipoFiltro && <input type="hidden" name="tipo_documento" value={tipoFiltro} />}
-            <label htmlFor="tipo_hito_filtro" className="text-text-muted">
-              Filtrar por tipo
-            </label>
-            <select
-              id="tipo_hito_filtro"
-              name="tipo_hito"
-              defaultValue={tipoHitoFiltro ?? ''}
-              className="rounded-lg border border-border bg-transparent px-2 py-1 text-text-primary"
-            >
-              <option value="">Todos</option>
-              {TIPOS_HITO.map((tipo) => (
-                <option key={tipo} value={tipo}>
-                  {TIPO_HITO_LABELS[tipo]}
-                </option>
-              ))}
-            </select>
-            <Button type="submit" variante="secondary" className="px-2 py-1">
-              Filtrar
-            </Button>
-            {tipoHitoFiltro && (
-              <a href={`/hogares/${hogar.id}`} className="text-brand-600 underline">
-                Ver todos
-              </a>
-            )}
-          </form>
-
-          {hitos.length === 0 ? (
-            <p className="text-sm text-text-muted">
-              {tipoHitoFiltro ? 'Sin hitos de este tipo.' : 'Sin hitos registrados todavía.'}
-            </p>
-          ) : (
-            <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
-              {hitos.map((hito) => (
-                <li key={hito.id} className="px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-text-primary">{TIPO_HITO_LABELS[hito.tipo]}</span>
-                    <span className="text-xs text-text-muted">{formatearFecha(hito.fecha_hito)}</span>
-                  </div>
-                  <p className="text-sm text-text-muted">
-                    {hito.categoria}
-                    {hito.persona_nombre && ` · ${hito.persona_nombre}`}
-                  </p>
-                  <p className="mt-1 text-sm whitespace-pre-wrap text-text-primary">{hito.comentario}</p>
-                  <p className="mt-1 text-xs text-text-muted">
-                    Registrado por {hito.creado_por_nombre ?? 'usuario desconocido'}
-                  </p>
-                </li>
-              ))}
-            </ul>
+          {puedeVerHistorial && (
+            <section>
+              <h2 className="font-medium text-text-primary">Historial de cambios críticos del hogar</h2>
+              {historial.length === 0 ? (
+                <p className="mt-2 text-sm text-text-muted">Sin cambios registrados todavía.</p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm">
+                  {historial.map((cambio) => (
+                    <li key={cambio.id} className="text-text-muted">
+                      {new Date(cambio.creado_en).toLocaleString('es-CL')} · {cambio.campo}:{' '}
+                      {cambio.valor_anterior ?? '—'} → {cambio.valor_nuevo ?? '—'}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           )}
-        </section>
+        </div>
       )}
 
-      {puedeVerInformes && (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-medium text-text-primary">Informes sociales</h2>
-            {puedeRegistrarInformes && (
-              <ButtonLink href={`/hogares/${hogar.id}/informes-sociales/nuevo`} variante="secondary">
-                Registrar informe
-              </ButtonLink>
+      {pestanaActiva === 'integrantes' && (
+        <div className="space-y-8">
+          <section>
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium text-text-primary">Integrantes</h2>
+              {puedeEditar && (
+                <ButtonLink href={`/hogares/${hogar.id}/integrantes/nuevo`} variante="secondary">
+                  Agregar integrante
+                </ButtonLink>
+              )}
+            </div>
+
+            {integrantes.length === 0 ? (
+              <p className="mt-2 text-sm text-text-muted">Sin integrantes registrados todavía.</p>
+            ) : (
+              <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
+                {integrantes.map((persona) => {
+                  const cambiarEstadoPersonaConIds = cambiarEstadoIntegrante.bind(
+                    null,
+                    persona.id,
+                    hogar.id
+                  )
+
+                  return (
+                    <li key={persona.id} className="flex items-center justify-between px-4 py-3">
+                      <div>
+                        <p className="font-medium text-text-primary">
+                          {persona.nombres} {persona.apellidos}
+                        </p>
+                        <p className="text-sm text-text-muted">
+                          {persona.rut} · {persona.parentesco}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {puedeEditar ? (
+                          <form action={cambiarEstadoPersonaConIds} className="flex items-center gap-2">
+                            <select
+                              name="estado"
+                              defaultValue={persona.estado}
+                              className="rounded-lg border border-border bg-transparent px-2 py-1 text-xs text-text-primary"
+                            >
+                              {ESTADOS_PERSONA.map((estado) => (
+                                <option key={estado} value={estado}>
+                                  {ESTADO_PERSONA_LABELS[estado]}
+                                </option>
+                              ))}
+                            </select>
+                            <Button type="submit" variante="secondary" className="px-2 py-1 text-xs">
+                              Aplicar
+                            </Button>
+                          </form>
+                        ) : (
+                          <EstadoBadge estado={persona.estado} />
+                        )}
+                        {puedeEditar && (
+                          <Link
+                            href={`/hogares/${hogar.id}/integrantes/${persona.id}/editar`}
+                            className="rounded-lg border border-border px-2 py-1 text-xs font-medium text-text-primary hover:bg-surface-alt"
+                          >
+                            Editar
+                          </Link>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
             )}
-          </div>
-
-          <BannerSensible>
-            Información sensible — el acceso a cada informe respeta además su nivel de
-            confidencialidad.
-          </BannerSensible>
-
-          {informesSociales.length === 0 ? (
-            <p className="text-sm text-text-muted">Sin informes sociales registrados todavía.</p>
-          ) : (
-            <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
-              {informesSociales.map((informe) => (
-                <li key={informe.id} className="space-y-1 px-4 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-text-primary">{informe.motivo}</span>
-                    <span className="shrink-0 text-xs text-text-muted">{formatearFecha(informe.fecha_informe)}</span>
-                  </div>
-                  <p className="text-sm text-text-muted">
-                    {informe.persona_nombre && `${informe.persona_nombre} · `}
-                    {informe.solicitud_id ? (
-                      <Link href={`/solicitudes/${informe.solicitud_id}`} className="text-brand-600 underline">
-                        {informe.solicitud_tipo_ayuda_nombre ?? 'Ver solicitud asociada'}
-                      </Link>
-                    ) : (
-                      'Sin solicitud asociada'
-                    )}
-                    {' · '}
-                    <span className="rounded-full border border-border px-2 py-0.5 text-xs">
-                      {NIVEL_CONFIDENCIALIDAD_LABELS[informe.nivel_confidencialidad]}
-                    </span>
-                  </p>
-                  <p className="mt-1 text-sm whitespace-pre-wrap text-text-primary">{informe.recomendacion_profesional}</p>
-                  <p className="mt-1 text-xs text-text-muted">
-                    Registrado por {informe.creado_por_nombre ?? 'usuario desconocido'}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          </section>
+        </div>
       )}
 
-      <section className="space-y-3">
-        <h2 className="font-medium text-text-primary">Documentos</h2>
-        {puedeEditar && <DocumentoUploadForm action={subirDocumentoConId} />}
-        <DocumentosSection
-          documentos={documentos}
-          baseHref={`/hogares/${hogar.id}`}
-          tipoFiltro={tipoFiltro}
-          puedeGestionarRetencion={puedeGestionarRetencion}
-          accionRetencion={puedeGestionarRetencion ? actualizarRetencionDocumento : undefined}
-          accionEliminar={puedeGestionarRetencion ? eliminarDocumento : undefined}
-          preservarParams={tipoHitoFiltro ? { tipo_hito: tipoHitoFiltro } : undefined}
-        />
-      </section>
+      {pestanaActiva === 'solicitudes' && (
+        <div className="space-y-8">
+          <section>
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium text-text-primary">Solicitudes asociadas</h2>
+              {puedeEditar && hogar.estado === 'activo' && (
+                <ButtonLink href={`/hogares/${hogar.id}/solicitudes/nueva`} variante="secondary">
+                  Nueva solicitud
+                </ButtonLink>
+              )}
+            </div>
 
-      <section>
-        <h2 className="font-medium text-text-primary">Ayudas entregadas</h2>
-        {ayudasEntregadas.length === 0 ? (
-          <p className="mt-2 text-sm text-text-muted">Sin ayudas entregadas todavía.</p>
-        ) : (
-          <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
-            {ayudasEntregadas.map((entrega) => (
-              <li key={entrega.entrega_id}>
-                <Link
-                  href={entrega.ruta}
-                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-alt"
+            {solicitudes.length === 0 ? (
+              <p className="mt-2 text-sm text-text-muted">Sin solicitudes registradas todavía.</p>
+            ) : (
+              <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
+                {solicitudes.map((solicitud) => (
+                  <li key={solicitud.id}>
+                    <Link
+                      href={`/solicitudes/${solicitud.id}`}
+                      className="flex items-center justify-between px-4 py-3 hover:bg-surface-alt"
+                    >
+                      <span>
+                        <span className="font-medium text-text-primary">{solicitud.tipo_ayuda_nombre}</span>
+                        {solicitud.persona_nombre && (
+                          <span className="ml-2 text-sm text-text-muted">{solicitud.persona_nombre}</span>
+                        )}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        {etiquetaReembolsoExcepcional(solicitud.tipo_ayuda_nombre) && (
+                          <BadgeExcepcion texto={etiquetaReembolsoExcepcional(solicitud.tipo_ayuda_nombre)!} />
+                        )}
+                        <EstadoBadge estado={solicitud.estado} />
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section>
+            <h2 className="font-medium text-text-primary">Ayudas entregadas</h2>
+            {ayudasEntregadas.length === 0 ? (
+              <p className="mt-2 text-sm text-text-muted">Sin ayudas entregadas todavía.</p>
+            ) : (
+              <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
+                {ayudasEntregadas.map((entrega) => (
+                  <li key={entrega.entrega_id}>
+                    <Link
+                      href={entrega.ruta}
+                      className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-alt"
+                    >
+                      <span>
+                        <span className="font-medium text-text-primary">{entrega.tipo_ayuda_nombre}</span>
+                        {entrega.persona_nombre && (
+                          <span className="ml-2 text-sm text-text-muted">{entrega.persona_nombre}</span>
+                        )}
+                        <span className="mt-1 block text-sm text-text-muted">
+                          Recibió: {entrega.receptor_nombre ?? '—'}
+                          {entrega.receptor_relacion && ` (${entrega.receptor_relacion})`}
+                        </span>
+                      </span>
+                      <span className="text-xs text-text-muted">
+                        {entrega.fecha_hora_entrega
+                          ? new Date(entrega.fecha_hora_entrega).toLocaleString('es-CL')
+                          : '—'}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
+
+      {pestanaActiva === 'seguimiento' && (
+        <div className="space-y-8">
+          {puedeVerHitos && (
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="font-medium text-text-primary">Hitos</h2>
+                {puedeRegistrarHitos && (
+                  <ButtonLink href={`/hogares/${hogar.id}/hitos/nuevo`} variante="secondary">
+                    Registrar hito
+                  </ButtonLink>
+                )}
+              </div>
+
+              <BannerSensible>
+                Información sensible — visible solo para evaluador social, aprobador y administrador.
+              </BannerSensible>
+
+              {/* US-22.02: "se puede filtrar por tipo de hito" — mismo patrón
+                  sin JS que el filtro de documentos (?tipo_hito=...). MR-04:
+                  conserva la pestaña al filtrar. */}
+              <form className="flex items-center gap-2 text-sm">
+                <input type="hidden" name="tab" value="seguimiento" />
+                <label htmlFor="tipo_hito_filtro" className="text-text-muted">
+                  Filtrar por tipo
+                </label>
+                <select
+                  id="tipo_hito_filtro"
+                  name="tipo_hito"
+                  defaultValue={tipoHitoFiltro ?? ''}
+                  className="rounded-lg border border-border bg-transparent px-2 py-1 text-text-primary"
                 >
-                  <span>
-                    <span className="font-medium text-text-primary">{entrega.tipo_ayuda_nombre}</span>
-                    {entrega.persona_nombre && (
-                      <span className="ml-2 text-sm text-text-muted">{entrega.persona_nombre}</span>
-                    )}
-                    <span className="mt-1 block text-sm text-text-muted">
-                      Recibió: {entrega.receptor_nombre ?? '—'}
-                      {entrega.receptor_relacion && ` (${entrega.receptor_relacion})`}
-                    </span>
-                  </span>
-                  <span className="text-xs text-text-muted">
-                    {entrega.fecha_hora_entrega
-                      ? new Date(entrega.fecha_hora_entrega).toLocaleString('es-CL')
-                      : '—'}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                  <option value="">Todos</option>
+                  {TIPOS_HITO.map((tipo) => (
+                    <option key={tipo} value={tipo}>
+                      {TIPO_HITO_LABELS[tipo]}
+                    </option>
+                  ))}
+                </select>
+                <Button type="submit" variante="secondary" className="px-2 py-1">
+                  Filtrar
+                </Button>
+                {tipoHitoFiltro && (
+                  <a href={hrefPestana('seguimiento')} className="text-brand-600 underline">
+                    Ver todos
+                  </a>
+                )}
+              </form>
 
-      {puedeVerHistorial && (
-        <section>
-          <h2 className="font-medium text-text-primary">Historial de cambios críticos del hogar</h2>
-          {historial.length === 0 ? (
-            <p className="mt-2 text-sm text-text-muted">Sin cambios registrados todavía.</p>
-          ) : (
-            <ul className="mt-2 space-y-2 text-sm">
-              {historial.map((cambio) => (
-                <li key={cambio.id} className="text-text-muted">
-                  {new Date(cambio.creado_en).toLocaleString('es-CL')} · {cambio.campo}:{' '}
-                  {cambio.valor_anterior ?? '—'} → {cambio.valor_nuevo ?? '—'}
-                </li>
-              ))}
-            </ul>
+              {hitos.length === 0 ? (
+                <p className="text-sm text-text-muted">
+                  {tipoHitoFiltro ? 'Sin hitos de este tipo.' : 'Sin hitos registrados todavía.'}
+                </p>
+              ) : (
+                <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+                  {hitos.map((hito) => (
+                    <li key={hito.id} className="px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-text-primary">{TIPO_HITO_LABELS[hito.tipo]}</span>
+                        <span className="text-xs text-text-muted">{formatearFecha(hito.fecha_hito)}</span>
+                      </div>
+                      <p className="text-sm text-text-muted">
+                        {hito.categoria}
+                        {hito.persona_nombre && ` · ${hito.persona_nombre}`}
+                      </p>
+                      <p className="mt-1 text-sm whitespace-pre-wrap text-text-primary">{hito.comentario}</p>
+                      <p className="mt-1 text-xs text-text-muted">
+                        Registrado por {hito.creado_por_nombre ?? 'usuario desconocido'}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           )}
-        </section>
+
+          {puedeVerInformes && (
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="font-medium text-text-primary">Informes sociales</h2>
+                {puedeRegistrarInformes && (
+                  <ButtonLink href={`/hogares/${hogar.id}/informes-sociales/nuevo`} variante="secondary">
+                    Registrar informe
+                  </ButtonLink>
+                )}
+              </div>
+
+              <BannerSensible>
+                Información sensible — el acceso a cada informe respeta además su nivel de
+                confidencialidad.
+              </BannerSensible>
+
+              {informesSociales.length === 0 ? (
+                <p className="text-sm text-text-muted">Sin informes sociales registrados todavía.</p>
+              ) : (
+                <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+                  {informesSociales.map((informe) => (
+                    <li key={informe.id} className="space-y-1 px-4 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-text-primary">{informe.motivo}</span>
+                        <span className="shrink-0 text-xs text-text-muted">{formatearFecha(informe.fecha_informe)}</span>
+                      </div>
+                      <p className="text-sm text-text-muted">
+                        {informe.persona_nombre && `${informe.persona_nombre} · `}
+                        {informe.solicitud_id ? (
+                          <Link href={`/solicitudes/${informe.solicitud_id}`} className="text-brand-600 underline">
+                            {informe.solicitud_tipo_ayuda_nombre ?? 'Ver solicitud asociada'}
+                          </Link>
+                        ) : (
+                          'Sin solicitud asociada'
+                        )}
+                        {' · '}
+                        <span className="rounded-full border border-border px-2 py-0.5 text-xs">
+                          {NIVEL_CONFIDENCIALIDAD_LABELS[informe.nivel_confidencialidad]}
+                        </span>
+                      </p>
+                      <p className="mt-1 text-sm whitespace-pre-wrap text-text-primary">{informe.recomendacion_profesional}</p>
+                      <p className="mt-1 text-xs text-text-muted">
+                        Registrado por {informe.creado_por_nombre ?? 'usuario desconocido'}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+        </div>
+      )}
+
+      {pestanaActiva === 'documentos' && (
+        <div className="space-y-8">
+          <section className="space-y-3">
+            <h2 className="font-medium text-text-primary">Documentos</h2>
+            {puedeEditar && <DocumentoUploadForm action={subirDocumentoConId} />}
+            <DocumentosSection
+              documentos={documentos}
+              baseHref={hrefPestana('documentos')}
+              tipoFiltro={tipoFiltro}
+              puedeGestionarRetencion={puedeGestionarRetencion}
+              accionRetencion={puedeGestionarRetencion ? actualizarRetencionDocumento : undefined}
+              accionEliminar={puedeGestionarRetencion ? eliminarDocumento : undefined}
+              preservarParams={{ tab: 'documentos' }}
+            />
+          </section>
+        </div>
       )}
     </div>
   )

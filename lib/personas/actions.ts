@@ -100,7 +100,7 @@ export async function agregarIntegrante(
   }
 
   revalidatePath(`/hogares/${grupoFamiliarId}`)
-  redirect(`/hogares/${grupoFamiliarId}`)
+  redirect(`/hogares/${grupoFamiliarId}?tab=integrantes`)
 }
 
 export async function actualizarIntegrante(
@@ -136,7 +136,7 @@ export async function actualizarIntegrante(
   }
 
   revalidatePath(`/hogares/${grupoFamiliarId}`)
-  redirect(`/hogares/${grupoFamiliarId}`)
+  redirect(`/hogares/${grupoFamiliarId}?tab=integrantes`)
 }
 
 // US-04.03: cambio de estado separado de la edición general (mismo patrón
