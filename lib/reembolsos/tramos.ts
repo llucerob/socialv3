@@ -31,6 +31,18 @@ export const NOMBRES_TIPO_AYUDA_REEMBOLSO_EXCEPCIONAL = [
   NOMBRE_TIPO_AYUDA_REEMBOLSO_FALLECIMIENTO,
 ] as const
 
+// US-25.03/25.05: "la solicitud queda marcada explícitamente como
+// 'excepcional — cirugía' [o fallecimiento] en el historial del hogar y en
+// reportes" (CLAUDE.md: las excepciones nunca se ocultan). Una vez aprobada
+// la solicitud queda en estado 'aprobada' como cualquier otra; lo que la
+// distingue es el tipo de ayuda, así que la etiqueta se deriva de ahí.
+// Devuelve null para cualquier otro tipo.
+export function etiquetaReembolsoExcepcional(nombreTipoAyuda: string): string | null {
+  if (nombreTipoAyuda === NOMBRE_TIPO_AYUDA_REEMBOLSO_CIRUGIA) return 'Excepcional — cirugía'
+  if (nombreTipoAyuda === NOMBRE_TIPO_AYUDA_REEMBOLSO_FALLECIMIENTO) return 'Excepcional — fallecimiento'
+  return null
+}
+
 // US-15.03/15.04: tope mensual de diálisis — "independiente del esquema
 // general de 4 reembolsos anuales" (CLAUDE.md), y calculado por PERSONA
 // beneficiaria (no por grupo familiar, a diferencia del pool de

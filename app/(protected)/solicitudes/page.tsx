@@ -6,6 +6,7 @@ import { ESTADO_SOLICITUD_LABELS, type EstadoSolicitud } from '@/lib/solicitudes
 import { UMBRAL_ELEGIBILIDAD_RSH } from '@/lib/hogares/rsh'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { BadgeExcepcion } from '@/components/ui/ExcepcionRSH'
+import { etiquetaReembolsoExcepcional } from '@/lib/reembolsos/tramos'
 import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
 import { formatearFecha } from '@/lib/fechas'
 
@@ -120,6 +121,9 @@ export default async function SolicitudesPage({
                       solicitud.grupo_familiar_tramo_rsh > UMBRAL_ELEGIBILIDAD_RSH && (
                         <BadgeExcepcion texto="Excepción RSH" />
                       )}
+                    {etiquetaReembolsoExcepcional(solicitud.tipo_ayuda_nombre) && (
+                      <BadgeExcepcion texto={etiquetaReembolsoExcepcional(solicitud.tipo_ayuda_nombre)!} />
+                    )}
                   </span>
                 </span>
                 <EstadoBadge estado={solicitud.estado} />

@@ -24,6 +24,7 @@ import { Card } from '@/components/ui/Card'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
+import { etiquetaReembolsoExcepcional } from '@/lib/reembolsos/tramos'
 import { BannerSensible } from '@/components/ui/BannerSensible'
 import { formatearFecha } from '@/lib/fechas'
 import { tieneRol } from '@/lib/auth/roles'
@@ -312,7 +313,12 @@ export default async function FichaGrupoFamiliarPage({
                       <span className="ml-2 text-sm text-text-muted">{solicitud.persona_nombre}</span>
                     )}
                   </span>
-                  <EstadoBadge estado={solicitud.estado} />
+                  <span className="flex shrink-0 items-center gap-2">
+                    {etiquetaReembolsoExcepcional(solicitud.tipo_ayuda_nombre) && (
+                      <BadgeExcepcion texto={etiquetaReembolsoExcepcional(solicitud.tipo_ayuda_nombre)!} />
+                    )}
+                    <EstadoBadge estado={solicitud.estado} />
+                  </span>
                 </Link>
               </li>
             ))}

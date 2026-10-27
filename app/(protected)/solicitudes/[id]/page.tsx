@@ -42,6 +42,7 @@ import {
   NOMBRE_TIPO_AYUDA_REEMBOLSO_GENERAL,
   NOMBRE_TIPO_AYUDA_REEMBOLSO_DIALISIS,
   NOMBRES_TIPO_AYUDA_REEMBOLSO_EXCEPCIONAL,
+  etiquetaReembolsoExcepcional,
 } from '@/lib/reembolsos/tramos'
 import { RegistrarPagoForm } from '../registrar-pago-form'
 import { ExcepcionDialisisForm } from '../excepcion-dialisis-form'
@@ -299,6 +300,9 @@ export default async function DetalleSolicitudPage({
             </Link>
             {solicitud.persona_nombre && <span>· {solicitud.persona_nombre}</span>}
             <EstadoBadge estado={solicitud.estado} />
+            {etiquetaReembolsoExcepcional(solicitud.tipo_ayuda_nombre) && (
+              <BadgeExcepcion texto={etiquetaReembolsoExcepcional(solicitud.tipo_ayuda_nombre)!} />
+            )}
           </p>
         </div>
         {puedeGestionar && ESTADOS_EDITABLES.includes(solicitud.estado) && (
@@ -581,7 +585,12 @@ export default async function DetalleSolicitudPage({
                           <span className="ml-2 text-xs text-warning-fg">posible duplicado</span>
                         )}
                       </span>
-                      <EstadoBadge estado={previa.estado} />
+                      <span className="flex shrink-0 items-center gap-2">
+                        {etiquetaReembolsoExcepcional(previa.tipo_ayuda_nombre) && (
+                          <BadgeExcepcion texto={etiquetaReembolsoExcepcional(previa.tipo_ayuda_nombre)!} />
+                        )}
+                        <EstadoBadge estado={previa.estado} />
+                      </span>
                     </Link>
                   </li>
                 )
