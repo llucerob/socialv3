@@ -4,6 +4,7 @@ import { obtenerCompra, listarMovimientosDeCompra } from '@/lib/compras/dal'
 import { TIPO_MOVIMIENTO_LABELS } from '@/lib/inventario/types'
 import { Card } from '@/components/ui/Card'
 import { ButtonLink } from '@/components/ui/Button'
+import { formatearFecha } from '@/lib/fechas'
 
 // US-24.03: "se puede consultar el historial de ingresos por compra".
 export default async function FichaCompraPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,7 +31,7 @@ export default async function FichaCompraPage({ params }: { params: Promise<{ id
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <h2 className="text-sm font-medium text-text-muted">Fecha de compra</h2>
-            <p className="text-text-primary">{compra.fecha_compra}</p>
+            <p className="text-text-primary">{formatearFecha(compra.fecha_compra)}</p>
           </div>
           <div>
             <h2 className="text-sm font-medium text-text-muted">Fecha de recepción</h2>

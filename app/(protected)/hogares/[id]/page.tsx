@@ -17,6 +17,7 @@ import { subirDocumentoHogar, actualizarRetencionDocumento, eliminarDocumento } 
 import { TIPOS_DOCUMENTO, type TipoDocumento } from '@/lib/documentos/types'
 import { DocumentoUploadForm } from '../../documento-upload-form'
 import { DocumentosSection } from '../../documentos-section'
+import { superaUmbralElegibilidad, UMBRAL_ELEGIBILIDAD_RSH } from '@/lib/hogares/rsh'
 import { RshBadge } from '../rsh-badge'
 import { GeorreferenciacionBadge } from '../georreferenciacion-badge'
 import { Card } from '@/components/ui/Card'
@@ -24,6 +25,7 @@ import { Button, ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
 import { BannerSensible } from '@/components/ui/BannerSensible'
+import { formatearFecha } from '@/lib/fechas'
 
 // US-20.02: "terreno no ve historial completo del hogar" — mismo criterio
 // que hogares/page.tsx: bloquea solo a terreno_repartidor, que no tiene
@@ -44,12 +46,6 @@ const ESTADOS_PERSONA: EstadoPersona[] = [
   'fallecido',
   'pendiente_validacion',
 ]
-
-// Umbral de CLAUDE.md ("Elegibilidad RSH: un hogar con tramo RSH > 40% no
-// puede aprobarse por flujo regular"). No hay un flag propio guardado en el
-// hogar para "tiene excepción RSH" — este es el dato real más directo
-// disponible (hogar.tramo_rsh) para esa regla de negocio exacta.
-const UMBRAL_EXCEPCION_RSH = 40
 
 export default async function FichaGrupoFamiliarPage({
   params,
@@ -122,8 +118,8 @@ export default async function FichaGrupoFamiliarPage({
 
   // Prompt 2 (Paso 2): "si el hogar tiene excepción RSH" — el dato real más
   // directo disponible es el propio tramo_rsh del hogar contra el umbral de
-  // CLAUDE.md (ver constante de arriba), no un flag guardado.
-  const tieneExcepcionRsh = hogar.tramo_rsh !== null && hogar.tramo_rsh > UMBRAL_EXCEPCION_RSH
+  // CLAUDE.md (`superaUmbralElegibilidad`, misma regla que aplica `aprobarSolicitud`), no un flag guardado.
+  const tieneExcepcionRsh = superaUmbralElegibilidad(hogar.tramo_rsh)
 
   return (
     <div className="space-y-8">
@@ -157,7 +153,7 @@ export default async function FichaGrupoFamiliarPage({
           <div className="flex items-start gap-3">
             <BadgeExcepcion texto="Excepción RSH" />
             <p>
-              Este hogar tiene tramo RSH {hogar.tramo_rsh}%, sobre el {UMBRAL_EXCEPCION_RSH}% —
+              Este hogar tiene tramo RSH {hogar.tramo_rsh}%, sobre el {UMBRAL_ELEGIBILIDAD_RSH}% —
               no puede aprobarse por flujo regular (CLAUDE.md). Cualquier ayuda requiere excepción
               explícita con informe social asociado.
             </p>
@@ -200,7 +196,7 @@ export default async function FichaGrupoFamiliarPage({
           </div>
           <div>
             <h3 className="text-sm font-medium text-text-muted">Fecha actualización RSH</h3>
-            <p className="text-text-primary">{hogar.fecha_actualizacion_rsh ?? '—'}</p>
+            <p className="text-text-primary">{formatearFecha(hogar.fecha_actualizacion_rsh)}</p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-text-muted">Coordenadas</h3>
@@ -378,7 +374,7 @@ export default async function FichaGrupoFamiliarPage({
                 <li key={hito.id} className="px-4 py-3">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-text-primary">{TIPO_HITO_LABELS[hito.tipo]}</span>
-                    <span className="text-xs text-text-muted">{hito.fecha_hito}</span>
+                    <span className="text-xs text-text-muted">{formatearFecha(hito.fecha_hito)}</span>
                   </div>
                   <p className="text-sm text-text-muted">
                     {hito.categoria}
@@ -419,7 +415,7 @@ export default async function FichaGrupoFamiliarPage({
                 <li key={informe.id} className="space-y-1 px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-text-primary">{informe.motivo}</span>
-                    <span className="shrink-0 text-xs text-text-muted">{informe.fecha_informe}</span>
+                    <span className="shrink-0 text-xs text-text-muted">{formatearFecha(informe.fecha_informe)}</span>
                   </div>
                   <p className="text-sm text-text-muted">
                     {informe.persona_nombre && `${informe.persona_nombre} · `}

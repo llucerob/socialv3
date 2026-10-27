@@ -20,6 +20,7 @@ import { Card } from "@/components/ui/Card";
 import { ButtonLink } from "@/components/ui/Button";
 import { EstadoBadge } from "@/components/ui/EstadoBadge";
 import { iniciales } from "@/components/ui/texto";
+import { formatearFecha } from "@/lib/fechas";
 
 // Sistema de diseño Coinco (Prompt 2, Paso 1) — /dashboard es UNA sola ruta
 // compartida por todos los roles (cada uno ve un subconjunto de
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
     tipoAyudaNombre: s.tipo_ayuda_nombre,
     direccion: s.grupo_familiar_direccion,
     personaNombre: s.persona_nombre,
-    fecha: s.fecha_solicitud,
+    fecha: formatearFecha(s.fecha_solicitud),
     estado: s.estado,
   }));
 
@@ -151,7 +152,7 @@ export default async function DashboardPage() {
               getKey={(s) => s.solicitud_id}
               getHref={(s) => s.ruta}
               getLinea={(s) => `${s.tipo_ayuda_nombre} · ${s.direccion}`}
-              getDetalle={(s) => s.fecha_solicitud}
+              getDetalle={(s) => formatearFecha(s.fecha_solicitud)}
               vacio="Sin solicitudes pendientes de aprobación."
             />
           )}
@@ -165,7 +166,7 @@ export default async function DashboardPage() {
                 profile.rol === "terreno_repartidor" ? `/mis-entregas/${e.entrega_id}` : e.ruta
               }
               getLinea={(e) => `${e.tipo_ayuda_nombre} · ${e.direccion}`}
-              getDetalle={(e) => e.fecha_programada}
+              getDetalle={(e) => formatearFecha(e.fecha_programada)}
               vacio="Sin entregas pendientes."
               hrefVerTodas={
                 profile.rol === "terreno_repartidor"

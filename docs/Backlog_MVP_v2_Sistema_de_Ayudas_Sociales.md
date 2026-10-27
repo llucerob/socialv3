@@ -234,16 +234,20 @@ para permitir la entrega de la ayuda cuando exista justificación social o autor
 **Criterios de aceptación:** validación de campos y documentos obligatorios · validación de regla RSH 40% (US-05.04) · paso a "en evaluación" · fecha y usuario registrados.
 **Estado:** completa salvo validación de documentos obligatorios (pendiente de EPIC 10, igual que US-07.01).
 
+**Estado (revisión Sprint 2, 2026-10-27):** la validación de documentos obligatorios ya no está pendiente. Además de los chequeos específicos de diálisis, cirugía y fallecimiento, `enviarAEvaluacion` aplica ahora la regla genérica del catálogo `requiere_documentos` (US-06.02): exige al menos un documento asociado a la solicitud. Hasta esta revisión, pañales de adulto y reembolso médico general tenían la regla activa pero podían enviarse a evaluación sin ningún respaldo. Verificado en navegador: sin documento queda bloqueada con mensaje explícito; con un documento pasa a "en evaluación" y la validación RSH queda en el historial.
+
 ### US-07.04 ✅ — Ver listado de solicitudes
 **Prioridad:** P0 · **Dependencias:** US-07.01.
 
 ### US-07.05 ✅ — Ver detalle de solicitud
 **Prioridad:** P0 · **Dependencias:** US-07.01.
 
-### US-07.06 ⏳ — Cambiar estado de solicitud
+### US-07.06 ✅ — Cambiar estado de solicitud
 **Prioridad:** P0 · **Dependencias:** US-07.05.
 **Estados mínimos:** borrador, ingresada, en evaluación, observada, aprobada, aprobada por excepción, rechazada, asignada para entrega/pago, entregada/pagada, cerrada, anulada.
 **Estado:** el enum completo de 11 estados y el mecanismo de auditoría (`solicitudes_historial`) ya existen en el esquema. Las transiciones con lógica de negocio propia implementadas son borrador/ingresada → en_evaluación (US-07.03) y → anulada (cancelación, disponible en cualquier momento antes de un estado terminal). El resto (observada, aprobada, aprobada_excepcion, rechazada, asignada_entrega_pago, entregada_pagada, cerrada) pertenece a EPIC 08/09/12/14, que aún no existen — se implementarán ahí, reutilizando este mismo mecanismo de auditoría.
+
+**Estado (revisión Sprint 2, 2026-10-27):** completa. Las transiciones que antes faltaban ya existen en los EPICs que las dueñan: observada (EPIC 08), aprobada/aprobada_excepcion/rechazada (EPIC 09 y 23), entregada_pagada (EPIC 12 y 14, vía `marcar_solicitud_entregada` / `marcar_solicitud_reembolso_pagada`). `cerrada` y `asignada_entrega_pago` quedan sin uso por la decisión del 2026-10-26 (estado terminal = `entregada_pagada`, ver `docs/backlog.md`, EPIC 21). Verificado en navegador: borrador → anulada y ingresada → en_evaluacion, ambas auditadas en `solicitudes_historial`.
 
 ---
 

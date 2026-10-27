@@ -10,6 +10,7 @@ import { CerrarIncidenteForm } from '../cerrar-incidente-form'
 import { NotificarIncidenteForm } from '../notificar-incidente-form'
 import { Card } from '@/components/ui/Card'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { formatearFecha } from '@/lib/fechas'
 
 const ROLES_VER_INCIDENTES = ['administrador', 'auditor_consulta'] as const
 const ROLES_GESTION_INCIDENTES = ['administrador'] as const
@@ -32,7 +33,7 @@ export default async function DetalleIncidentePage({ params }: { params: Promise
       <div>
         <h1 className="text-2xl font-semibold text-text-primary">{TIPO_INCIDENTE_LABELS[incidente.tipo]}</h1>
         <p className="mt-1 flex items-center gap-2 text-sm text-text-muted">
-          <span>{incidente.fecha_incidente}</span>
+          <span>{formatearFecha(incidente.fecha_incidente)}</span>
           <EstadoBadge estado={incidente.estado} />
         </p>
       </div>

@@ -7,7 +7,7 @@ import {
   listarSolicitudesDeHogar,
   detectarPosiblesDuplicados,
 } from '@/lib/solicitudes/dal'
-import { anularSolicitud, volverAEvaluacion } from '@/lib/solicitudes/actions'
+import { volverAEvaluacion } from '@/lib/solicitudes/actions'
 import type { EstadoSolicitud } from '@/lib/solicitudes/types'
 import { listarEvaluacionesDeSolicitud } from '@/lib/evaluaciones/dal'
 import { RECOMENDACION_LABELS } from '@/lib/evaluaciones/types'
@@ -59,6 +59,7 @@ import { DocumentoUploadForm } from '../../documento-upload-form'
 import { DocumentosSection } from '../../documentos-section'
 import { EnviarEvaluacionButton } from '../enviar-evaluacion-button'
 import { ObservarForm } from '../observar-form'
+import { AnularForm } from '../anular-form'
 import { EvaluacionForm } from '../evaluacion-form'
 import { AprobarForm } from '../aprobar-form'
 import { RechazarForm } from '../rechazar-form'
@@ -69,6 +70,7 @@ import { Button, ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
 import { BannerSensible } from '@/components/ui/BannerSensible'
+import { formatearFecha } from '@/lib/fechas'
 
 // EPIC 07: gestión general de la solicitud (crear, editar, enviar, anular).
 const ROLES_GESTION_SOLICITUD = ['administrador', 'evaluador_social']
@@ -276,7 +278,6 @@ export default async function DetalleSolicitudPage({
   const asignarResponsableConId = entrega ? asignarResponsable.bind(null, entrega.id) : undefined
   const reprogramarEntregaConId = entrega ? reprogramarEntrega.bind(null, entrega.id) : undefined
 
-  const anularConId = anularSolicitud.bind(null, id)
   const volverAEvaluacionConId = volverAEvaluacion.bind(null, id)
 
   return (
@@ -303,7 +304,7 @@ export default async function DetalleSolicitudPage({
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <h3 className="text-sm font-medium text-text-muted">Fecha</h3>
-            <p className="text-text-primary">{solicitud.fecha_solicitud}</p>
+            <p className="text-text-primary">{formatearFecha(solicitud.fecha_solicitud)}</p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-text-muted">Motivo</h3>
@@ -324,7 +325,11 @@ export default async function DetalleSolicitudPage({
 
       <section className="space-y-3">
         <h2 className="font-medium text-text-primary">Documentos</h2>
-        {puedeGestionar && <DocumentoUploadForm action={subirDocumentoConId} />}
+        {/* Una solicitud anulada es terminal e irreversible: no tiene sentido
+            seguir adjuntándole respaldo. */}
+        {puedeGestionar && solicitud.estado !== 'anulada' && (
+          <DocumentoUploadForm action={subirDocumentoConId} />
+        )}
         <DocumentosSection
           documentos={documentos}
           baseHref={`/solicitudes/${id}`}
@@ -345,7 +350,7 @@ export default async function DetalleSolicitudPage({
               <p className="text-sm text-text-primary">
                 Pagado: <span className="font-medium">${pagoReembolso.monto_pagado.toLocaleString('es-CL')}</span>
                 {' · '}
-                {pagoReembolso.medio_pago} · {pagoReembolso.fecha_pago}
+                {pagoReembolso.medio_pago} · {formatearFecha(pagoReembolso.fecha_pago)}
               </p>
               <p className="text-sm text-text-muted">
                 Registrado por {pagoReembolso.registrado_por_nombre ?? 'usuario desconocido'}
@@ -420,7 +425,7 @@ export default async function DetalleSolicitudPage({
             <div className="space-y-3">
               <p className="text-sm text-text-primary">
                 Estado: <span className="font-medium">{ESTADO_ENTREGA_LABELS[entrega.estado]}</span>
-                {entrega.fecha_programada && ` · programada ${entrega.fecha_programada}`}
+                {entrega.fecha_programada && ` · programada ${formatearFecha(entrega.fecha_programada)}`}
                 {' · responsable: '}
                 {entrega.responsable_nombre ?? 'sin asignar'}
               </p>
@@ -498,7 +503,7 @@ export default async function DetalleSolicitudPage({
             <div className="space-y-3">
               <p className="text-sm text-text-primary">
                 Estado: <span className="font-medium">{ESTADO_ENTREGA_LABELS[entregaLectura.estado]}</span>
-                {entregaLectura.fecha_programada && ` · programada ${entregaLectura.fecha_programada}`}
+                {entregaLectura.fecha_programada && ` · programada ${formatearFecha(entregaLectura.fecha_programada)}`}
                 {' · responsable: '}
                 {entregaLectura.responsable_nombre ?? 'sin asignar'}
               </p>
@@ -563,7 +568,7 @@ export default async function DetalleSolicitudPage({
                     >
                       <span>
                         <span className="font-medium text-text-primary">{previa.tipo_ayuda_nombre}</span>
-                        <span className="ml-2 text-sm text-text-muted">{previa.fecha_solicitud}</span>
+                        <span className="ml-2 text-sm text-text-muted">{formatearFecha(previa.fecha_solicitud)}</span>
                         {esDuplicado && (
                           <span className="ml-2 text-xs text-warning-fg">posible duplicado</span>
                         )}
@@ -580,15 +585,13 @@ export default async function DetalleSolicitudPage({
 
       {puedeGestionar && (
         <section className="flex flex-wrap items-start gap-4">
+          {/* key: al subir un documento se remonta el botón, así no queda a la
+              vista un aviso de "faltan documentos" ya resuelto. */}
           {ESTADOS_EDITABLES.includes(solicitud.estado) && (
-            <EnviarEvaluacionButton solicitudId={solicitud.id} />
+            <EnviarEvaluacionButton key={documentos.length} solicitudId={solicitud.id} />
           )}
           {ESTADOS_ANULABLES.includes(solicitud.estado) && (
-            <form action={anularConId}>
-              <Button type="submit" variante="danger">
-                Anular solicitud
-              </Button>
-            </form>
+            <AnularForm solicitudId={solicitud.id} />
           )}
         </section>
       )}
@@ -696,7 +699,7 @@ export default async function DetalleSolicitudPage({
                     <p className="text-sm font-medium text-text-primary">
                       {informe.motivo} ·{' '}
                       <span className="font-normal text-text-muted">
-                        {informe.creado_por_nombre ?? 'Asistente social'} · {informe.fecha_informe}
+                        {informe.creado_por_nombre ?? 'Asistente social'} · {formatearFecha(informe.fecha_informe)}
                       </span>
                     </p>
                     <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">

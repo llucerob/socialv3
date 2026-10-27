@@ -31,6 +31,7 @@ const ESTADOS_EDITABLES: EstadoSolicitud[] = ['borrador', 'ingresada']
 const ESTADOS_ANULABLES: EstadoSolicitud[] = ['borrador', 'ingresada', 'en_evaluacion']
 
 export type ObservarSolicitudState = { error?: string; motivo?: string } | undefined
+export type AnularSolicitudState = { error?: string; motivo?: string } | undefined
 
 type ValoresSolicitudFormulario = {
   tipo_ayuda_id: string
@@ -389,6 +390,32 @@ export async function enviarAEvaluacion(
     }
   }
 
+  // US-07.03: "validación de documentos obligatorios" + US-06.02: "uso de
+  // reglas al crear solicitudes" — regla genérica del catálogo
+  // (`requiere_documentos`), para los tipos que no tienen un chequeo propio
+  // más fino arriba (hoy: pañales de adulto y reembolso médico general; el
+  // maestro pide respaldo documental para ambos, secciones 12 y 14). Exige
+  // al menos un documento asociado a la solicitud; qué documento exacto
+  // corresponde lo revisa el evaluador (US-14.02). Se lee del catálogo, así
+  // que un tipo nuevo configurado por el administrador queda cubierto sin
+  // tocar código.
+  if (tipoAyuda?.requiere_documentos) {
+    const { count, error: errorDocumentos } = await supabase
+      .from('documentos')
+      .select('id', { count: 'exact', head: true })
+      .eq('solicitud_id', id)
+
+    if (errorDocumentos) {
+      throw new Error('No se pudo verificar los documentos de la solicitud.')
+    }
+
+    if (!count) {
+      return {
+        bloqueado: `${tipoAyuda.nombre} requiere documentos de respaldo. Sube al menos un documento antes de enviar a evaluación.`,
+      }
+    }
+  }
+
   const hogar = await obtenerGrupoFamiliar(solicitud.grupo_familiar_id)
   if (!hogar) {
     throw new Error('Hogar no encontrado.')
@@ -424,9 +451,20 @@ export async function enviarAEvaluacion(
 // "volver a evaluación" (más abajo, US-08.03) ya están implementadas. El
 // resto (aprobada, rechazada, asignada_entrega_pago, entregada_pagada,
 // cerrada) pertenece a EPIC 09/12/14.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- firma requerida por <form action>
-export async function anularSolicitud(id: string, _formData: FormData): Promise<void> {
+// Anular es irreversible, así que exige motivo (mismo patrón que
+// observarSolicitud): queda en solicitudes_historial como
+// 'motivo_anulacion', junto al cambio de estado que ya audita el trigger.
+export async function anularSolicitud(
+  id: string,
+  _prevState: AnularSolicitudState,
+  formData: FormData
+): Promise<AnularSolicitudState> {
   await requireRole([...ROLES_GESTION_SOLICITUDES])
+
+  const motivo = formData.get('motivo')?.toString().trim() ?? ''
+  if (!motivo) {
+    return { error: 'El motivo de anulación es obligatorio.', motivo }
+  }
 
   const supabase = await createClient()
   const { data: solicitud } = await supabase
@@ -436,13 +474,18 @@ export async function anularSolicitud(id: string, _formData: FormData): Promise<
     .maybeSingle()
 
   if (!solicitud || !ESTADOS_ANULABLES.includes(solicitud.estado)) {
-    throw new Error('Esta solicitud no puede anularse desde su estado actual.')
+    return { error: 'Esta solicitud no puede anularse desde su estado actual.', motivo }
   }
 
   const { error } = await supabase.from('solicitudes').update({ estado: 'anulada' }).eq('id', id)
   if (error) {
-    throw new Error('No se pudo anular la solicitud.')
+    return { error: 'No se pudo anular la solicitud.', motivo }
   }
+
+  await supabase.rpc('registrar_anulacion_solicitud', {
+    p_solicitud_id: id,
+    p_motivo: motivo,
+  })
 
   revalidatePath(`/solicitudes/${id}`)
   revalidatePath('/solicitudes')

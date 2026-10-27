@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import type { EntradaFormState } from '@/lib/inventario/actions'
 import type { CompraConNombres } from '@/lib/compras/types'
 import { Button } from '@/components/ui/Button'
+import { formatearFecha } from '@/lib/fechas'
 
 type EntradaStockFormAction = (
   state: EntradaFormState,
@@ -52,7 +53,7 @@ export function EntradaStockForm({
             <option value="">Ninguna (ingreso manual)</option>
             {compras.map((compra) => (
               <option key={compra.id} value={compra.id}>
-                OC {compra.numero_orden_compra} · {compra.proveedor_nombre} · {compra.fecha_compra}
+                OC {compra.numero_orden_compra} · {compra.proveedor_nombre} · {formatearFecha(compra.fecha_compra)}
               </option>
             ))}
           </select>

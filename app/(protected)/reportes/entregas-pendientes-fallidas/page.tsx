@@ -6,6 +6,7 @@ import { ESTADO_ENTREGA_FILTRO_LABELS, type EstadoEntregaFiltroReporte } from '@
 import { ButtonLink } from '@/components/ui/Button'
 import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { formatearFecha } from '@/lib/fechas'
 
 const ROLES_REPORTE = ['administrador', 'bodega_logistica'] as const
 
@@ -108,7 +109,7 @@ export default async function ReporteEntregasPendientesFallidasPage({
                 <span className="mx-2">·</span>
                 <span className="text-text-muted">{fila.responsable_nombre ?? 'sin asignar'}</span>
                 {fila.fecha_programada && (
-                  <span className="mx-2 text-text-muted">· programada {fila.fecha_programada}</span>
+                  <span className="mx-2 text-text-muted">· programada {formatearFecha(fila.fecha_programada)}</span>
                 )}
                 {fila.motivo_fallo && (
                   <div className="mt-1 text-text-muted">

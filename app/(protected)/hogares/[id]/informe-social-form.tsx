@@ -7,6 +7,7 @@ import type { Persona } from '@/lib/personas/types'
 import type { SolicitudConRelaciones } from '@/lib/solicitudes/types'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { formatearFecha } from '@/lib/fechas'
 
 type InformeSocialFormAction = (
   state: InformeSocialFormState,
@@ -112,7 +113,7 @@ export function InformeSocialForm({
                 <option value="">Ninguna (informe general del hogar)</option>
                 {solicitudes.map((solicitud) => (
                   <option key={solicitud.id} value={solicitud.id}>
-                    {solicitud.tipo_ayuda_nombre} · {solicitud.fecha_solicitud}
+                    {solicitud.tipo_ayuda_nombre} · {formatearFecha(solicitud.fecha_solicitud)}
                   </option>
                 ))}
               </select>

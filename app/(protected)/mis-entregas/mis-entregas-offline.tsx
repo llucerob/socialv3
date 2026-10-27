@@ -18,6 +18,7 @@ import { EntregaFallidaForm } from './entrega-fallida-form'
 import { IndicadorSincronizacion } from './sync-indicator'
 import { Card } from '@/components/ui/Card'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { formatearFecha } from '@/lib/fechas'
 
 // EPIC 27 (US-27.06) — chip de "pendiente de sincronizar" por entrega,
 // distinto del indicador global (IndicadorSincronizacion, contador de la
@@ -152,7 +153,7 @@ export function MisEntregasOffline({
                 </p>
                 {entrega.persona_nombre && <p className="text-sm text-text-muted">{entrega.persona_nombre}</p>}
                 {entrega.fecha_programada && (
-                  <p className="mt-1 text-sm text-text-muted">Programada: {entrega.fecha_programada}</p>
+                  <p className="mt-1 text-sm text-text-muted">Programada: {formatearFecha(entrega.fecha_programada)}</p>
                 )}
                 <div className="mt-3 flex items-center gap-4 text-sm">
                   <button

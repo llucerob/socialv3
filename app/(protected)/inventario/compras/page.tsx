@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { requireRole } from '@/lib/auth/dal'
 import { listarCompras } from '@/lib/compras/dal'
 import { ButtonLink } from '@/components/ui/Button'
+import { formatearFecha } from '@/lib/fechas'
 
 const ROLES_COMPRAS = ['administrador', 'bodega_logistica'] as const
 
@@ -34,7 +35,7 @@ export default async function ComprasPage() {
                   </span>
                 </span>
                 <span className="text-sm text-text-muted">
-                  {compra.cantidad} · ${compra.valor_total.toLocaleString('es-CL')} · {compra.fecha_compra}
+                  {compra.cantidad} · ${compra.valor_total.toLocaleString('es-CL')} · {formatearFecha(compra.fecha_compra)}
                 </span>
               </Link>
             </li>

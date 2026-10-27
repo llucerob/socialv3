@@ -12,6 +12,7 @@ import {
 import { ButtonLink } from '@/components/ui/Button'
 import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { formatearFecha } from '@/lib/fechas'
 
 // US-26.02: "acceso restringido a administrador/auditor".
 const ROLES_VER_INCIDENTES = ['administrador', 'auditor_consulta'] as const
@@ -95,7 +96,7 @@ export default async function IncidentesPage({ searchParams }: { searchParams: P
                 className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-alt"
               >
                 <span>
-                  <span className="text-sm text-text-muted">{incidente.fecha_incidente}</span>
+                  <span className="text-sm text-text-muted">{formatearFecha(incidente.fecha_incidente)}</span>
                   <span className="mx-2">·</span>
                   <span className="font-medium text-text-primary">{TIPO_INCIDENTE_LABELS[incidente.tipo]}</span>
                   <span className="ml-2 text-sm text-text-muted">

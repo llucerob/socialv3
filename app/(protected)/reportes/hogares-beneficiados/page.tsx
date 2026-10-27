@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth/dal'
 import { reporteHogaresBeneficiados, listarSectoresDisponibles } from '@/lib/reportes/dal'
 import { ButtonLink } from '@/components/ui/Button'
 import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
+import { formatearFecha } from '@/lib/fechas'
 
 const ROLES_REPORTE = ['administrador', 'auditor_consulta'] as const
 
@@ -93,7 +94,7 @@ export default async function ReporteHogaresBeneficiadosPage({
                   {fila.cantidad_ayudas} {fila.cantidad_ayudas === 1 ? 'ayuda' : 'ayudas'}
                 </span>
                 {fila.fecha_ultima_ayuda && (
-                  <span className="mx-2 text-text-muted">· última: {fila.fecha_ultima_ayuda}</span>
+                  <span className="mx-2 text-text-muted">· última: {formatearFecha(fila.fecha_ultima_ayuda)}</span>
                 )}
               </div>
               <Link href={fila.ruta} className="shrink-0 text-sm text-brand-600 hover:underline">

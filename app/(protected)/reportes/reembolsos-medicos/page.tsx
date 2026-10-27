@@ -5,6 +5,7 @@ import { TIPO_REEMBOLSO_LABELS, type TipoReembolsoFiltro } from '@/lib/reportes/
 import { ButtonLink } from '@/components/ui/Button'
 import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
 import { BadgeExcepcion } from '@/components/ui/ExcepcionRSH'
+import { formatearFecha } from '@/lib/fechas'
 
 const ROLES_REPORTE = ['administrador', 'finanzas'] as const
 
@@ -80,7 +81,7 @@ export default async function ReporteReembolsosMedicosPage({
           {filas.map((fila) => (
             <li key={fila.solicitud_id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
               <div className="min-w-0 flex-1">
-                <span className="text-text-muted">{fila.fecha_solicitud}</span>
+                <span className="text-text-muted">{formatearFecha(fila.fecha_solicitud)}</span>
                 <span className="mx-2">·</span>
                 <span className="font-medium text-text-primary">{fila.tipo_reembolso_nombre}</span>
                 <span className="mx-2">·</span>

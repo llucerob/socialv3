@@ -11,6 +11,7 @@ import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
 import { ParadaRuta } from '@/components/ui/ParadaRuta'
 import { GeorreferenciacionBadge } from '../hogares/georreferenciacion-badge'
+import { formatearFecha } from '@/lib/fechas'
 
 const ROLES_LOGISTICA = ['administrador', 'bodega_logistica'] as const
 
@@ -75,7 +76,7 @@ export default async function EntregasPage({
                 <span className="ml-2 text-sm text-text-muted">
                   {entrega.grupo_familiar_direccion}
                   {entrega.persona_nombre ? ` · ${entrega.persona_nombre}` : ''}
-                  {entrega.fecha_programada ? ` · programada ${entrega.fecha_programada}` : ''}
+                  {entrega.fecha_programada ? ` · programada ${formatearFecha(entrega.fecha_programada)}` : ''}
                   {' · '}
                   {entrega.responsable_nombre ?? 'sin asignar'}
                 </span>
