@@ -10,7 +10,8 @@ begin;
 do $$
 declare v_admin uuid;
 begin
-  select id into v_admin from public.profiles where rol='administrador' and estado='activo' limit 1;
+  -- Roles múltiples (2026-10-27): profiles.roles es una lista; profiles.rol ya no existe.
+  select id into v_admin from public.profiles where 'administrador' = any(roles) and estado='activo' limit 1;
   if v_admin is null then raise exception 'No hay un administrador activo en profiles.'; end if;
   perform set_config('migracion.usuario', v_admin::text, false);
 end $$;
@@ -213675,5 +213676,16 @@ begin
     raise warning 'Conteos base no coinciden con lo esperado. Revisa antes de confirmar.';
   end if;
 end $$;
+
+-- Catálogo de sectores (US-19.02). La migración de esquema 20260808000002
+-- lo llena con los sectores de los hogares existentes, pero en una base
+-- nueva no hay hogares cuando corre, así que queda vacío. Sin esto, el
+-- formulario de hogar (que solo ofrece sectores activos) no tendría ninguno
+-- de los sectores reales de los hogares migrados.
+insert into public.sectores (nombre, creado_por)
+select distinct trim(sector), current_setting('migracion.usuario')::uuid
+from public.grupos_familiares
+where sector is not null and length(trim(sector)) > 0
+on conflict (nombre) do nothing;
 
 commit;

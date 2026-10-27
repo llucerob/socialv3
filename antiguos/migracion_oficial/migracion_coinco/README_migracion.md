@@ -4,6 +4,24 @@ Municipalidad de Coinco · Departamento Social
 
 Esta migración **transforma** los datos del sistema antiguo al esquema nuevo (no es una copia 1:1). Una fila de `beneficiarios` del sistema viejo se reparte en `grupos_familiares` + `personas`; los reembolsos y entregas se reconstruyen como la cadena `solicitudes → decisiones_solicitud → entregas` que exige el modelo nuevo.
 
+> **Actualización 2026-10-27:** usa el `01_migracion_datos.sql` de esta carpeta (la copia que había en `antiguos/migracion_oficial/` se eliminó: tenía dos fechas inválidas, `2023-24-24` y `1940-04-31`, que hacían fallar la carga). Este script quedó adaptado al esquema actual:
+> - busca al administrador con `'administrador' = any(roles)`, porque desde el cambio a roles múltiples `profiles.rol` ya no existe;
+> - al final llena el catálogo `sectores` con los sectores de los hogares migrados (en una base nueva queda vacío, porque la migración de sectores corre antes de que existan hogares).
+>
+> Se probó completo, dentro de una transacción con `rollback`, contra el esquema con las 70 migraciones aplicadas. Para una carga desde cero en producción, ver la sección siguiente.
+
+## Carga desde cero en producción (proyecto Supabase nuevo)
+
+1. **Respaldo** del proyecto actual (Dashboard → Database → Backups, o `pg_dump`). Se recomienda un proyecto nuevo en vez de resetear el actual, para conservarlo como respaldo hasta validar.
+2. **Migraciones:** `npx supabase link --project-ref <ref>` y `npx supabase db push` desde la raíz del repo. Aplica las 70 migraciones (esquema, bucket privado de documentos, tipos de ayuda, productos, origen de rutas). La columna `origen` ya viene en `20260810000003_add_origen_solicitudes.sql`, así que el Paso 0 de abajo no hace falta.
+3. **Auth (Dashboard):** Site URL y Redirect URLs con el dominio real; desactivar el registro público de usuarios.
+4. **Primer administrador:** crear en Auth → Users el usuario `llucerob@gmail.com`; el trigger `bootstrap_admin` le asigna el rol de administrador. Es requisito del paso 5.
+5. **Datos:** `psql "<connection string, modo session>" -f 01_migracion_datos.sql` desde esta carpeta (o `node run_migracion.mjs "<connection string>" 01_migracion_datos.sql`). En una base limpia los conteos del final deben ser exactos: 1667 hogares, 1883 personas, 13399 solicitudes migradas, 12100 entregas, 4649 hitos.
+6. **App:** variables `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (y opcional `NEXT_PUBLIC_MAPBOX_TOKEN`) del proyecto nuevo; build con `npm run build`.
+7. **Después, como administrador:** crear los usuarios del equipo y marcar sus roles en `/admin/usuarios`; ajustar el origen de rutas (la migración trae coordenadas aproximadas); asignar sector real a los hogares en `SIN ASIGNAR`; reclasificar los reembolsos de diálisis si el origen permite identificarlos.
+
+No cargar en producción usuarios `qa.*`, hogares `QA-…` ni scripts de prueba: solo existen en la base local.
+
 ## Orden de ejecución
 
 ### Paso 0 — Migración de esquema (una sola vez)
