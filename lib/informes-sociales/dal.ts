@@ -64,3 +64,19 @@ export async function listarInformesSocialesDeSolicitud(solicitudId: string): Pr
   if (error) throw error
   return resolverNombres(supabase, data as unknown as FilaConRelaciones[])
 }
+
+// "No se puede aprobar sin un informe social asociado" (US-05.05, US-23.01,
+// US-25.01) se decide con el total de informes de la solicitud, no con los
+// que el rol alcanza a leer: al aprobador no le llegan los de
+// confidencialidad 'alta' (puede_ver_informe_social), y eso lo bloqueaba
+// aunque el requisito estuviera cumplido. La función solo cuenta, no
+// expone contenido.
+export async function contarInformesSocialesDeSolicitud(solicitudId: string): Promise<number> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('contar_informes_sociales_de_solicitud', {
+    p_solicitud_id: solicitudId,
+  })
+
+  if (error) throw error
+  return data ?? 0
+}

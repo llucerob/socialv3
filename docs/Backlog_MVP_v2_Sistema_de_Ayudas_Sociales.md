@@ -291,6 +291,8 @@ para permitir la entrega de la ayuda cuando exista justificación social o autor
 
 ## EPIC 10 — Documentos y archivos privados
 
+**Estado (revisión Sprint 3, 2026-10-27):** el último criterio ya está cubierto: los topes reales (US-14.05/14.06, US-15.04, US-25.02) se validan antes de aprobar. Se movieron a `validarTopesReembolso` (`lib/decisiones/actions.ts`), que ahora se aplica también en `aprobarExcepcionRsh`. Antes, la excepción RSH no revisaba ningún tope: un reembolso de un hogar sobre el 40% podía aprobarse por cualquier monto, saltándose el tope anual de $100.000 por hogar. Verificado en navegador con un aprobador puro: una excepción RSH por $500.000 sobre un primer reembolso general quedó bloqueada por el tope de $50.000 (y el bloqueo quedó en el historial); por $40.000 pasó a "aprobada por excepción".
+
 ### US-10.01 ✅ — Subir documento a una solicitud
 **Prioridad:** P0 · **Dependencias:** US-07.01.
 **Tipos de documentos iniciales:** RSH, certificado médico, certificado de diálisis, boleta, comprobante, fotografía, informe social, otro.
@@ -589,6 +591,8 @@ para revisar antecedentes antes de tomar decisiones.
 ## 🆕 EPIC 24 — Compras municipales *(fuera del MVP estricto, trazado explícitamente)*
 
 > El Contexto Maestro dedica la sección 29 a compras municipales vinculadas a inventario. En la v1 del backlog este módulo no existía ni se mencionaba. Se agrega aquí, explícitamente marcado como **post-MVP**, para que la ausencia sea una decisión consciente y no un olvido. Para el MVP, el ingreso de stock se resuelve de forma manual con US-11.02 (registrar entrada de stock), sin trazabilidad formal de proveedor u orden de compra.
+
+> **Estado (revisión Sprint 3, 2026-10-27):** verificado lo que había quedado pendiente. Visibilidad por rol confirmada en la base (informe `alta` creado por el evaluador): administrador y autor lo leen; aprobador, finanzas, bodega y terreno no. Se encontró y corrigió un bug: el requisito "informe social asociado" se medía leyendo la tabla con RLS, así que al aprobador no le llegaban los informes `alta` y la excepción RSH (y los reembolsos excepcionales) quedaban bloqueados aunque el informe existiera; tampoco veía el formulario de excepción. Ahora se mide con `contar_informes_sociales_de_solicitud` (migración `20260817000003`, solo cuenta, no expone contenido) y la solicitud le avisa al aprobador que hay un informe de confidencialidad alta que su rol no puede ver. La tarjeta "Decisión" ahora marca explícitamente "Aprobada por excepción".
 
 ### 🆕 US-24.01 ✅ — Registrar proveedor
 **Prioridad:** P2 · **Dependencias:** ninguna.

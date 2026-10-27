@@ -18,6 +18,7 @@ import { obtenerDecisionDeSolicitud } from '@/lib/decisiones/dal'
 import { DECISION_LABELS } from '@/lib/decisiones/types'
 import {
   listarInformesSocialesDeSolicitud,
+  contarInformesSocialesDeSolicitud,
   ROLES_VER_INFORMES,
   ROLES_REGISTRAR_INFORMES,
 } from '@/lib/informes-sociales/dal'
@@ -217,6 +218,11 @@ export default async function DetalleSolicitudPage({
   // US-23.02/US-23.03: "la referencia es visible desde ambos lados" — este
   // es el lado caso → informe.
   const informesSociales = puedeVerInformes ? await listarInformesSocialesDeSolicitud(id) : []
+  // El requisito "informe social asociado" se mide con el total, no con los
+  // que este rol alcanza a leer: al aprobador no le llegan los de
+  // confidencialidad 'alta', y sin esto no vería el formulario de excepción.
+  const totalInformesSociales = puedeVerInformes ? await contarInformesSocialesDeSolicitud(id) : 0
+  const informesNoVisibles = totalInformesSociales - informesSociales.length
   const puedeAprobarExcepcionRsh =
     ROLES_EXCEPCION_RSH.includes(profile.rol) && rshSuperaUmbral && solicitud.estado === 'en_evaluacion'
 
@@ -665,7 +671,7 @@ export default async function DetalleSolicitudPage({
             Información sensible — el acceso a cada informe respeta además su nivel de confidencialidad.
           </BannerSensible>
 
-          {rshSuperaUmbral && informesSociales.length === 0 && (
+          {rshSuperaUmbral && totalInformesSociales === 0 && (
             <CardExcepcion>
               <div className="flex items-start gap-3">
                 <BadgeExcepcion texto="Excepción RSH" />
@@ -677,7 +683,7 @@ export default async function DetalleSolicitudPage({
             </CardExcepcion>
           )}
 
-          {esReembolsoExcepcional && informesSociales.length === 0 && (
+          {esReembolsoExcepcional && totalInformesSociales === 0 && (
             <CardExcepcion>
               <div className="flex items-start gap-3">
                 <BadgeExcepcion texto="Reembolso excepcional" />
@@ -689,8 +695,18 @@ export default async function DetalleSolicitudPage({
             </CardExcepcion>
           )}
 
+          {informesNoVisibles > 0 && (
+            <p className="mt-2 text-sm text-text-muted">
+              {informesNoVisibles === 1
+                ? 'Hay 1 informe social de confidencialidad alta asociado a esta solicitud, no visible para tu rol.'
+                : `Hay ${informesNoVisibles} informes sociales de confidencialidad alta asociados a esta solicitud, no visibles para tu rol.`}
+            </p>
+          )}
+
           {informesSociales.length === 0 ? (
-            <p className="mt-2 text-sm text-text-muted">Sin informes sociales asociados a esta solicitud.</p>
+            informesNoVisibles === 0 && (
+              <p className="mt-2 text-sm text-text-muted">Sin informes sociales asociados a esta solicitud.</p>
+            )
           ) : (
             <ul className="mt-2 space-y-3">
               {informesSociales.map((informe) => (
@@ -717,6 +733,14 @@ export default async function DetalleSolicitudPage({
         <section>
           <h2 className="font-medium text-text-primary">Decisión</h2>
           <Card className="mt-2">
+            {/* CLAUDE.md: "las excepciones nunca se ocultan" — la decisión se
+                guarda como 'aprobada' también en una excepción; lo que la
+                distingue es el estado de la solicitud. */}
+            {solicitud.estado === 'aprobada_excepcion' && (
+              <div className="mb-2">
+                <BadgeExcepcion texto="Aprobada por excepción" />
+              </div>
+            )}
             <p className="text-sm font-medium text-text-primary">
               {DECISION_LABELS[decision.decision]} ·{' '}
               <span className="font-normal text-text-muted">
@@ -776,7 +800,7 @@ export default async function DetalleSolicitudPage({
               />
               <RechazarForm solicitudId={solicitud.id} />
               {puedeAprobarExcepcionDialisis && <ExcepcionDialisisForm solicitudId={solicitud.id} />}
-              {puedeAprobarExcepcionRsh && informesSociales.length > 0 && (
+              {puedeAprobarExcepcionRsh && totalInformesSociales > 0 && (
                 <ExcepcionRshForm solicitudId={solicitud.id} esReembolso={esReembolso} />
               )}
             </div>

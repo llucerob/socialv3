@@ -18,7 +18,7 @@ import {
   TOPE_ANUAL_POR_GRUPO_FAMILIAR,
   TOPE_MENSUAL_DIALISIS,
 } from '@/lib/reembolsos/tramos'
-import { listarInformesSocialesDeSolicitud } from '@/lib/informes-sociales/dal'
+import { contarInformesSocialesDeSolicitud } from '@/lib/informes-sociales/dal'
 
 // US-09.01/09.02: "solo rol aprobador puede aprobar/rechazar" — igual que el
 // resto del proyecto, administrador actúa como superusuario junto al rol
@@ -103,13 +103,99 @@ async function validarContexto(solicitudId: string): Promise<ResultadoValidacion
   }
 }
 
+// Topes de reembolso (CLAUDE.md: "reglas de negocio que nunca deben
+// romperse"). Se aplican igual en la aprobación regular y en la excepción
+// RSH: la excepción RSH salta la regla de elegibilidad del 40%, no los
+// topes monetarios. El único camino para superar un tope es la excepción
+// de diálisis (US-15.05). Devuelve el mensaje de error, o null si el monto
+// cabe; cada bloqueo queda auditado vía registrar_bloqueo_tope_reembolso.
+async function validarTopesReembolso(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  solicitudId: string,
+  contexto: ContextoValido,
+  nombreTipoAyuda: string,
+  montoAprobado: number
+): Promise<string | null> {
+  // US-14.06: bloqueo del tope calculado, exclusivo de reembolso médico
+  // general (no diálisis ni ayudas físicas).
+  if (nombreTipoAyuda === NOMBRE_TIPO_AYUDA_REEMBOLSO_GENERAL) {
+    const anio = Number(contexto.fechaSolicitud.slice(0, 4))
+    const tope = await calcularTopeReembolsoGeneral(contexto.grupoFamiliarId, anio)
+
+    if (tope.bloqueadoPorTramos || tope.remanenteAnual <= 0) {
+      const motivo =
+        tope.remanenteAnual <= 0
+          ? `pool anual agotado: el hogar ya usó los $${TOPE_ANUAL_POR_GRUPO_FAMILIAR.toLocaleString('es-CL')} disponibles este ${anio}`
+          : `el hogar ya tiene ${tope.numeroReembolso - 1} reembolsos generales aprobados en ${anio} (máximo 4)`
+      await supabase.rpc('registrar_bloqueo_tope_reembolso', {
+        p_solicitud_id: solicitudId,
+        p_motivo: `bloqueada: ${motivo}`,
+      })
+      return `No se puede aprobar un nuevo reembolso general: ${motivo}.`
+    }
+
+    if (montoAprobado > tope.topeFinal) {
+      await supabase.rpc('registrar_bloqueo_tope_reembolso', {
+        p_solicitud_id: solicitudId,
+        p_motivo: `bloqueada: monto solicitado ($${montoAprobado.toLocaleString('es-CL')}) supera el tope calculado ($${tope.topeFinal.toLocaleString('es-CL')}) para el ${tope.numeroReembolso}º reembolso del año`,
+      })
+      return `El monto aprobado no puede superar el tope calculado para el ${tope.numeroReembolso}º reembolso de este año: $${tope.topeFinal.toLocaleString('es-CL')} (tramo $${tope.topeTramo.toLocaleString('es-CL')}, remanente anual $${tope.remanenteAnual.toLocaleString('es-CL')}).`
+    }
+  }
+
+  // US-15.04: "el sistema valida acumulado antes de aprobar" · "si el
+  // monto supera $150.000 mensual, no se permite aprobación normal" · "el
+  // sistema informa monto disponible restante" · "la validación queda
+  // registrada" (misma rpc de auditoría que el bloqueo de reembolso
+  // general — el campo es genérico, 'tope_reembolso', no específico de un
+  // solo tipo de ayuda). El único camino para superar este tope es
+  // aprobarExcepcionDialisis (US-15.05, solo administrador).
+  if (nombreTipoAyuda === NOMBRE_TIPO_AYUDA_REEMBOLSO_DIALISIS && contexto.personaId) {
+    const [anioDialisis, mesDialisis] = contexto.fechaSolicitud.split('-').map(Number)
+    const { acumuladoMensual, saldoDisponible } = await calcularAcumuladoDialisisMensual(
+      contexto.personaId,
+      anioDialisis,
+      mesDialisis
+    )
+
+    if (montoAprobado > saldoDisponible) {
+      const motivo = `monto aprobado ($${montoAprobado.toLocaleString('es-CL')}) supera el saldo mensual disponible ($${saldoDisponible.toLocaleString('es-CL')} de $${TOPE_MENSUAL_DIALISIS.toLocaleString('es-CL')}, acumulado $${acumuladoMensual.toLocaleString('es-CL')})`
+      await supabase.rpc('registrar_bloqueo_tope_reembolso', {
+        p_solicitud_id: solicitudId,
+        p_motivo: `bloqueada: ${motivo}`,
+      })
+      return `No se puede aprobar por la vía normal: ${motivo}. Requiere una excepción (US-15.05).`
+    }
+  }
+
+  // US-25.02: "el monto aprobado no puede superar el remanente calculado"
+  // (fuente única compartida con el reembolso general — sin vía de
+  // excepción a diferencia de diálisis, el backlog no la contempla).
+  if ((NOMBRES_TIPO_AYUDA_REEMBOLSO_EXCEPCIONAL as readonly string[]).includes(nombreTipoAyuda)) {
+    const anioExcepcional = Number(contexto.fechaSolicitud.slice(0, 4))
+    const remanenteAnual = await calcularRemanenteReembolsoAnual(contexto.grupoFamiliarId, anioExcepcional)
+
+    if (montoAprobado > remanenteAnual) {
+      const motivo = `monto aprobado ($${montoAprobado.toLocaleString('es-CL')}) supera el remanente anual disponible del hogar ($${remanenteAnual.toLocaleString('es-CL')} de $${TOPE_ANUAL_POR_GRUPO_FAMILIAR.toLocaleString('es-CL')})`
+      await supabase.rpc('registrar_bloqueo_tope_reembolso', {
+        p_solicitud_id: solicitudId,
+        p_motivo: `bloqueada: ${motivo}`,
+      })
+      return `No se puede aprobar: ${motivo}.`
+    }
+  }
+
+  return null
+}
+
 // US-09.03: para ayudas de tipo 'reembolso' se exige monto_aprobado (sin
 // superar monto_solicitado); para ayudas físicas se exige cantidad_aprobada
 // (texto libre). US-14.03/14.06: para reembolso médico general, además, el
 // monto aprobado tampoco puede superar el tope calculado por US-14.05 (el
 // menor entre el tramo teórico y el remanente anual compartido — ver
 // lib/reembolsos/dal.ts, fuente única reutilizable por EPIC 25 cuando
-// exista). El tope mensual de diálisis (EPIC 15) sigue sin implementarse.
+// exista). Los topes viven en validarTopesReembolso, compartida con la
+// excepción RSH.
 export async function aprobarSolicitud(
   solicitudId: string,
   _prevState: DecisionFormState,
@@ -168,99 +254,27 @@ export async function aprobarSolicitud(
       }
     }
 
-    // US-14.06: bloqueo del tope calculado, exclusivo de reembolso médico
-    // general (no diálisis ni ayudas físicas).
-    if (tipoAyuda.nombre === NOMBRE_TIPO_AYUDA_REEMBOLSO_GENERAL) {
-      const anio = Number(validacion.contexto.fechaSolicitud.slice(0, 4))
-      const tope = await calcularTopeReembolsoGeneral(validacion.contexto.grupoFamiliarId, anio)
-
-      if (tope.bloqueadoPorTramos || tope.remanenteAnual <= 0) {
-        const motivo =
-          tope.remanenteAnual <= 0
-            ? `pool anual agotado: el hogar ya usó los $${TOPE_ANUAL_POR_GRUPO_FAMILIAR.toLocaleString('es-CL')} disponibles este ${anio}`
-            : `el hogar ya tiene ${tope.numeroReembolso - 1} reembolsos generales aprobados en ${anio} (máximo 4)`
-        await supabase.rpc('registrar_bloqueo_tope_reembolso', {
-          p_solicitud_id: solicitudId,
-          p_motivo: `bloqueada: ${motivo}`,
-        })
-        return {
-          error: `No se puede aprobar un nuevo reembolso general: ${motivo}.`,
-          valores,
-        }
-      }
-
-      if (montoAprobado > tope.topeFinal) {
-        await supabase.rpc('registrar_bloqueo_tope_reembolso', {
-          p_solicitud_id: solicitudId,
-          p_motivo: `bloqueada: monto solicitado ($${montoAprobado.toLocaleString('es-CL')}) supera el tope calculado ($${tope.topeFinal.toLocaleString('es-CL')}) para el ${tope.numeroReembolso}º reembolso del año`,
-        })
-        return {
-          error: `El monto aprobado no puede superar el tope calculado para el ${tope.numeroReembolso}º reembolso de este año: $${tope.topeFinal.toLocaleString('es-CL')} (tramo $${tope.topeTramo.toLocaleString('es-CL')}, remanente anual $${tope.remanenteAnual.toLocaleString('es-CL')}).`,
-          valores,
-        }
-      }
-    }
-
-    // US-15.04: "el sistema valida acumulado antes de aprobar" · "si el
-    // monto supera $150.000 mensual, no se permite aprobación normal" · "el
-    // sistema informa monto disponible restante" · "la validación queda
-    // registrada" (misma rpc de auditoría que el bloqueo de reembolso
-    // general — el campo es genérico, 'tope_reembolso', no específico de un
-    // solo tipo de ayuda). El único camino para superar este tope es
-    // aprobarExcepcionDialisis (US-15.05, solo administrador).
-    if (tipoAyuda.nombre === NOMBRE_TIPO_AYUDA_REEMBOLSO_DIALISIS && validacion.contexto.personaId) {
-      const [anioDialisis, mesDialisis] = validacion.contexto.fechaSolicitud.split('-').map(Number)
-      const { acumuladoMensual, saldoDisponible } = await calcularAcumuladoDialisisMensual(
-        validacion.contexto.personaId,
-        anioDialisis,
-        mesDialisis
-      )
-
-      if (montoAprobado > saldoDisponible) {
-        const motivo = `monto aprobado ($${montoAprobado.toLocaleString('es-CL')}) supera el saldo mensual disponible ($${saldoDisponible.toLocaleString('es-CL')} de $${TOPE_MENSUAL_DIALISIS.toLocaleString('es-CL')}, acumulado $${acumuladoMensual.toLocaleString('es-CL')})`
-        await supabase.rpc('registrar_bloqueo_tope_reembolso', {
-          p_solicitud_id: solicitudId,
-          p_motivo: `bloqueada: ${motivo}`,
-        })
-        return {
-          error: `No se puede aprobar por la vía normal: ${motivo}. Requiere una excepción (US-15.05).`,
-          valores,
-        }
-      }
-    }
-
     // US-25.01/25.03/25.04/25.05: reembolso excepcional (cirugía o
     // fallecimiento) — "exige informe social asociado" (mismo criterio que
-    // la excepción RSH, ver aprobarExcepcionRsh más abajo) y "el monto
-    // aprobado no puede superar el remanente calculado" (US-25.02, fuente
-    // única compartida con el reembolso general — sin vía de excepción a
-    // diferencia de diálisis, el backlog no la contempla).
+    // la excepción RSH, ver aprobarExcepcionRsh más abajo).
     if ((NOMBRES_TIPO_AYUDA_REEMBOLSO_EXCEPCIONAL as readonly string[]).includes(tipoAyuda.nombre)) {
-      const informes = await listarInformesSocialesDeSolicitud(solicitudId)
-      if (informes.length === 0) {
+      if ((await contarInformesSocialesDeSolicitud(solicitudId)) === 0) {
         return {
           error: 'No se puede aprobar sin un informe social asociado a esta solicitud.',
           valores,
         }
       }
+    }
 
-      const anioExcepcional = Number(validacion.contexto.fechaSolicitud.slice(0, 4))
-      const remanenteAnual = await calcularRemanenteReembolsoAnual(
-        validacion.contexto.grupoFamiliarId,
-        anioExcepcional
-      )
-
-      if (montoAprobado > remanenteAnual) {
-        const motivo = `monto aprobado ($${montoAprobado.toLocaleString('es-CL')}) supera el remanente anual disponible del hogar ($${remanenteAnual.toLocaleString('es-CL')} de $${TOPE_ANUAL_POR_GRUPO_FAMILIAR.toLocaleString('es-CL')})`
-        await supabase.rpc('registrar_bloqueo_tope_reembolso', {
-          p_solicitud_id: solicitudId,
-          p_motivo: `bloqueada: ${motivo}`,
-        })
-        return {
-          error: `No se puede aprobar: ${motivo}.`,
-          valores,
-        }
-      }
+    const errorTope = await validarTopesReembolso(
+      supabase,
+      solicitudId,
+      validacion.contexto,
+      tipoAyuda.nombre,
+      montoAprobado
+    )
+    if (errorTope) {
+      return { error: errorTope, valores }
     }
   } else {
     if (!cantidadRaw) {
@@ -450,8 +464,7 @@ export async function aprobarExcepcionRsh(
   // asociado" — asociado a ESTA solicitud específicamente (US-23.03: "la
   // referencia es visible desde ambos lados"), no a cualquier informe del
   // hogar en general.
-  const informes = await listarInformesSocialesDeSolicitud(solicitudId)
-  if (informes.length === 0) {
+  if ((await contarInformesSocialesDeSolicitud(solicitudId)) === 0) {
     return {
       error: 'No se puede aprobar la excepción sin un informe social asociado a esta solicitud.',
       valores,
@@ -482,6 +495,17 @@ export async function aprobarExcepcionRsh(
         error: `El monto aprobado no puede superar el monto solicitado ($${validacion.contexto.montoSolicitado.toLocaleString('es-CL')}).`,
         valores,
       }
+    }
+
+    const errorTope = await validarTopesReembolso(
+      supabase,
+      solicitudId,
+      validacion.contexto,
+      tipoAyuda.nombre,
+      montoAprobado
+    )
+    if (errorTope) {
+      return { error: errorTope, valores }
     }
   } else {
     if (!cantidadRaw) {
