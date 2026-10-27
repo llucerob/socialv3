@@ -10,7 +10,7 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(login, undefined);
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-surface-alt px-4">
+    <div className="flex flex-1 items-center justify-center bg-surface-app px-4">
       <div className="w-full max-w-sm space-y-8">
         <Image src="/logo-horizontal" alt="Municipalidad de Coinco" width={340} height={64} unoptimized className="mx-auto h-auto w-full max-w-[280px]" />
 

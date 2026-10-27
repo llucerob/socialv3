@@ -16,7 +16,7 @@ export default async function ProtectedLayout({
       <MobileNav rol={profile.rol} />
       <div className="flex flex-1">
         <NavSidebar rol={profile.rol} />
-        <main className="flex flex-1 flex-col bg-surface-alt p-4 md:p-6">{children}</main>
+        <main className="flex flex-1 flex-col bg-surface-app p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

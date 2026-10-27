@@ -7,7 +7,7 @@ import type { ReactNode } from 'react'
 // negocio quede garantizada por el componente, no por convención.
 export function BadgeExcepcion({ texto = 'Excepción' }: { texto?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-exception-border bg-exception-bg px-2.5 py-0.5 text-xs font-medium text-exception-fg">
+    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-exception-bg px-3 py-1 text-xs font-bold text-exception-fg ring-1 ring-exception-border ring-inset">
       <svg
         aria-hidden="true"
         viewBox="0 0 20 20"
@@ -27,7 +27,7 @@ export function BadgeExcepcion({ texto = 'Excepción' }: { texto?: string }) {
 
 export function CardExcepcion({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border-l-4 border-exception-border bg-exception-bg p-4 text-exception-fg">
+    <div className="rounded-lg border-l-4 border-exception-border bg-exception-bg px-4 py-3 leading-relaxed text-exception-fg">
       {children}
     </div>
   )

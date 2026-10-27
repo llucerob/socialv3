@@ -28,7 +28,7 @@ export function BadgeAccionAuditoria({ accion }: { accion: string }) {
   const label = esAccionValida(accion) ? ACCION_AUDITORIA_LABELS[accion] : accion
 
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${CLASES_POR_TONO[tono]}`}>
+    <span className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ring-1 ring-current/20 ring-inset ${CLASES_POR_TONO[tono]}`}>
       {label}
     </span>
   )

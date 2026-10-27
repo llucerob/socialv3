@@ -28,7 +28,7 @@ const CLASES_POR_TONO: Record<Tono, string> = {
   warning: 'bg-warning-bg text-warning-fg',
   danger: 'bg-danger-bg text-danger-fg',
   neutral: 'bg-neutral-bg text-neutral-fg',
-  exception: 'bg-exception-bg text-exception-fg border border-exception-border',
+  exception: 'bg-exception-bg text-exception-fg ring-exception-border',
 }
 
 const TONO_POR_ESTADO: Record<EstadoBadgeValor, Tono> = {
@@ -72,7 +72,7 @@ const LABEL_POR_ESTADO: Record<EstadoBadgeValor, string> = {
 export function EstadoBadge({ estado }: { estado: EstadoBadgeValor }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${CLASES_POR_TONO[TONO_POR_ESTADO[estado]]}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ring-1 ring-current/20 ring-inset ${CLASES_POR_TONO[TONO_POR_ESTADO[estado]]}`}
     >
       {LABEL_POR_ESTADO[estado]}
     </span>

@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
 // desapercibido", aplicada aquí a confidencialidad en vez de excepción RSH.
 export function BannerSensible({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-start gap-2 rounded-lg border-l-4 border-exception-border bg-exception-bg px-3 py-2 text-xs text-exception-fg">
+    <div className="flex items-start gap-2 rounded-lg border-l-4 border-exception-border bg-exception-bg px-4 py-3 text-xs leading-relaxed text-exception-fg">
       <svg
         aria-hidden="true"
         viewBox="0 0 24 24"

@@ -2,7 +2,9 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import Link, { type LinkProps } from 'next/link'
 
 // Sistema de diseño Coinco — variantes de botón sobre tokens de globals.css.
-// `primary` usa brand-600 (accionable), nunca brand-800 (reservado a marca).
+// Refinamiento institucional (estilo Regalos de Navidad): `primary` y
+// `secondary` pasan al azul de marca brand-800 (antes brand-600), con
+// altura mínima táctil de 44px (min-h-11) y peso semibold.
 // `inverse` agregada en el Prompt 2: ninguna variante existente se ve sobre
 // un fondo oscuro (ej. la cabecera bg-brand-800 de la ficha de hogar) — es
 // un patrón que se repetirá en cualquier cabecera de marca, no solo ahí.
@@ -13,14 +15,14 @@ import Link, { type LinkProps } from 'next/link'
 export type VarianteBoton = 'primary' | 'secondary' | 'ghost' | 'inverse' | 'danger'
 
 const CLASES_BASE =
-  'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50'
+  'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-[15px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50'
 
 const CLASES_POR_VARIANTE: Record<VarianteBoton, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-800 disabled:hover:bg-brand-600',
+  primary: 'bg-brand-800 text-white hover:bg-brand-900 disabled:hover:bg-brand-800',
   secondary:
-    'border border-brand-600 text-brand-600 hover:bg-brand-50 disabled:hover:bg-transparent',
+    'border-2 border-brand-800 bg-surface text-brand-800 hover:bg-brand-50 disabled:hover:bg-surface',
   ghost: 'text-brand-600 hover:bg-brand-50 disabled:hover:bg-transparent',
-  inverse: 'border border-white/40 text-white hover:bg-white/10 disabled:hover:bg-transparent',
+  inverse: 'border-2 border-white/60 text-white hover:bg-white/10 disabled:hover:bg-transparent',
   danger:
     'border border-danger-fg/30 text-danger-fg hover:bg-danger-bg disabled:hover:bg-transparent',
 }
