@@ -3,12 +3,13 @@ import { getProfile } from '@/lib/auth/dal'
 import { listarSectores } from '@/lib/sectores/dal'
 import { ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { tieneRol } from '@/lib/auth/roles'
 
 // US-19.02: "se pueden crear/editar/desactivar sectores".
 export default async function SectoresPage() {
   const profile = await getProfile()
   const sectores = await listarSectores()
-  const puedeGestionar = profile.rol === 'administrador'
+  const puedeGestionar = tieneRol(profile, ['administrador'])
 
   return (
     <div className="space-y-6">

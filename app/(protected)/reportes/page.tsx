@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { requireRole } from '@/lib/auth/dal'
 import type { RolUsuario } from '@/lib/auth/types'
+import { tieneRol } from '@/lib/auth/roles'
 
 type ReporteDisponible = {
   href: string
@@ -57,7 +58,7 @@ const ROLES_CON_REPORTES = ['administrador', 'auditor_consulta', 'finanzas', 'bo
 
 export default async function ReportesPage() {
   const profile = await requireRole([...ROLES_CON_REPORTES])
-  const reportes = REPORTES.filter((reporte) => reporte.roles.includes(profile.rol))
+  const reportes = REPORTES.filter((reporte) => tieneRol(profile, reporte.roles))
 
   return (
     <div className="space-y-6">

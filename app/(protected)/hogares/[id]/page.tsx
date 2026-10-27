@@ -26,12 +26,14 @@ import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
 import { BannerSensible } from '@/components/ui/BannerSensible'
 import { formatearFecha } from '@/lib/fechas'
+import { tieneRol } from '@/lib/auth/roles'
+import type { RolUsuario } from '@/lib/auth/types'
 
 // US-20.02: "terreno no ve historial completo del hogar" — mismo criterio
 // que hogares/page.tsx: bloquea solo a terreno_repartidor, que no tiene
 // enlace de nav a este módulo; el resto de roles válidos mantiene el mismo
 // acceso amplio que ya tenía.
-const ROLES_VER_HOGAR = [
+const ROLES_VER_HOGAR: RolUsuario[] = [
   'administrador',
   'evaluador_social',
   'aprobador',
@@ -39,7 +41,7 @@ const ROLES_VER_HOGAR = [
   'finanzas',
   'auditor_consulta',
 ] as const
-const ROLES_VEN_HISTORIAL = ['administrador', 'evaluador_social']
+const ROLES_VEN_HISTORIAL: RolUsuario[] = ['administrador', 'evaluador_social']
 const ESTADOS_PERSONA: EstadoPersona[] = [
   'activo',
   'ya_no_pertenece_hogar',
@@ -69,10 +71,10 @@ export default async function FichaGrupoFamiliarPage({
     notFound()
   }
 
-  const puedeEditar = profile.rol === 'administrador' || profile.rol === 'evaluador_social'
+  const puedeEditar = tieneRol(profile, ['administrador', 'evaluador_social'])
   // US-18.04: solo administrador define estado de conservación o elimina un documento.
-  const puedeGestionarRetencion = profile.rol === 'administrador'
-  const puedeVerHistorial = ROLES_VEN_HISTORIAL.includes(profile.rol)
+  const puedeGestionarRetencion = tieneRol(profile, ['administrador'])
+  const puedeVerHistorial = tieneRol(profile, ROLES_VEN_HISTORIAL)
   const historial = puedeVerHistorial ? await obtenerHistorialGrupoFamiliar(id) : []
   const integrantes = await listarIntegrantes(id)
   const solicitudes = await listarSolicitudesDeHogar(id)
@@ -92,8 +94,8 @@ export default async function FichaGrupoFamiliarPage({
   // audita: no mostrar una sección en una ficha que el usuario sí puede
   // ver por otros motivos no es un "intento de acceso", es la misma
   // omisión condicional que ya aplica a "Ayudas entregadas"/"Documentos".
-  const puedeVerHitos = ROLES_VER_HITOS.includes(profile.rol)
-  const puedeRegistrarHitos = ROLES_REGISTRAR_HITOS.includes(profile.rol)
+  const puedeVerHitos = tieneRol(profile, ROLES_VER_HITOS)
+  const puedeRegistrarHitos = tieneRol(profile, ROLES_REGISTRAR_HITOS)
   const todosLosHitos = puedeVerHitos ? await listarHitosDeHogar(id) : []
   // US-22.02: "se puede filtrar por tipo de hito" — mismo criterio que el
   // filtro de documentos (DocumentosSection): se trae el listado completo
@@ -107,8 +109,8 @@ export default async function FichaGrupoFamiliarPage({
   // (puede_ver_informe_social); ROLES_VER_INFORMES solo evita el viaje de
   // ida y vuelta para roles que de todos modos recibirían una lista vacía,
   // mismo criterio que puedeVerHitos.
-  const puedeVerInformes = ROLES_VER_INFORMES.includes(profile.rol)
-  const puedeRegistrarInformes = ROLES_REGISTRAR_INFORMES.includes(profile.rol)
+  const puedeVerInformes = tieneRol(profile, ROLES_VER_INFORMES)
+  const puedeRegistrarInformes = tieneRol(profile, ROLES_REGISTRAR_INFORMES)
   const informesSociales = puedeVerInformes ? await listarInformesSocialesDeHogar(id) : []
 
   const documentos = await listarDocumentosDeHogar(id)

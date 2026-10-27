@@ -11,7 +11,7 @@ export async function listarUsuarios(): Promise<Usuario[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, nombre, email, rol, estado, created_at')
+    .select('id, nombre, email, roles, estado, created_at')
     .order('nombre')
 
   if (error) throw error
@@ -22,7 +22,7 @@ export async function obtenerUsuario(id: string): Promise<Usuario | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, nombre, email, rol, estado, created_at')
+    .select('id, nombre, email, roles, estado, created_at')
     .eq('id', id)
     .maybeSingle()
 

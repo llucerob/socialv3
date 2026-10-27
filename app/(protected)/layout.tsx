@@ -12,10 +12,10 @@ export default async function ProtectedLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <Topbar nombre={profile.nombre} rol={profile.rol} />
-      <MobileNav rol={profile.rol} />
+      <Topbar nombre={profile.nombre} roles={profile.roles} />
+      <MobileNav roles={profile.roles} />
       <div className="flex flex-1">
-        <NavSidebar rol={profile.rol} />
+        <NavSidebar roles={profile.roles} />
         <main className="flex flex-1 flex-col bg-surface-app p-4 md:p-6">{children}</main>
       </div>
     </div>

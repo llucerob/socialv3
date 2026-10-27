@@ -1,4 +1,5 @@
 import type { RolUsuario } from '@/lib/auth/types'
+import { ROLES_ORDENADOS } from '@/lib/auth/roles'
 
 // Estructura de navegación por rol (US-02.01: "estructura y navegación").
 // `disponible: false` marca módulos que aún no existen — se activan a medida
@@ -79,7 +80,25 @@ export const NAV_BY_ROL: Record<RolUsuario, NavItem[]> = {
 // Punto único de "ruteo condicional por rol" (US-02.01). Hoy todos los roles
 // caen en /dashboard porque es la única vista construida; a medida que existan
 // landing pages propias por rol, este es el lugar donde se bifurca.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- rol se usará cuando existan landing pages propias por rol
-export function getHomeRoute(rol: RolUsuario): string {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- roles se usará cuando existan landing pages propias por rol
+export function getHomeRoute(roles: readonly RolUsuario[]): string {
   return '/dashboard'
+}
+
+// Menú de un usuario con varios roles: la unión de los menús de cada rol,
+// sin repetir entradas. El orden sale de recorrer los roles en orden fijo
+// (ROLES_ORDENADOS), así "Panel" queda primero y el menú no cambia según el
+// orden en que se asignaron los roles.
+export function navParaRoles(roles: readonly RolUsuario[]): NavItem[] {
+  const vistos = new Set<string>()
+  const items: NavItem[] = []
+  for (const rol of ROLES_ORDENADOS) {
+    if (!roles.includes(rol)) continue
+    for (const item of NAV_BY_ROL[rol]) {
+      if (vistos.has(item.href)) continue
+      vistos.add(item.href)
+      items.push(item)
+    }
+  }
+  return items
 }

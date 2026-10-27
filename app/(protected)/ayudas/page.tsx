@@ -3,11 +3,12 @@ import { getProfile } from '@/lib/auth/dal'
 import { listarTiposAyuda } from '@/lib/ayudas/dal'
 import { ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { tieneRol } from '@/lib/auth/roles'
 
 export default async function AyudasPage() {
   const profile = await getProfile()
   const tipos = await listarTiposAyuda()
-  const puedeGestionar = profile.rol === 'administrador'
+  const puedeGestionar = tieneRol(profile, ['administrador'])
 
   return (
     <div className="space-y-6">

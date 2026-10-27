@@ -4,5 +4,5 @@ import { getHomeRoute } from "@/lib/dashboard/nav";
 
 export default async function Home() {
   const profile = await getProfile();
-  redirect(getHomeRoute(profile.rol));
+  redirect(getHomeRoute(profile.roles));
 }

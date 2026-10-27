@@ -58,8 +58,8 @@ function badgeRetencion(estado: DocumentoConDetalle['estado_retencion']) {
 // validación simplemente no se renderiza.
 //
 // US-18.04: `puedeGestionarRetencion`/`accionRetencion`/`accionEliminar` son
-// igual de opcionales y solo los pasa un llamador con `profile.rol ===
-// 'administrador'` — el resto de roles ve el estado de conservación (dato no
+// igual de opcionales y solo los pasa un llamador con rol
+// administrador — el resto de roles ve el estado de conservación (dato no
 // sensible) pero no el control para cambiarlo ni el botón de eliminar.
 export function DocumentosSection({
   documentos,

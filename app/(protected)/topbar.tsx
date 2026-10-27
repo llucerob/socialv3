@@ -1,4 +1,5 @@
-import { ROL_LABELS, type RolUsuario } from '@/lib/auth/types'
+import type { RolUsuario } from '@/lib/auth/types'
+import { etiquetaRoles } from '@/lib/auth/roles'
 import { iniciales } from '@/components/ui/texto'
 import { LogoutButton } from './logout-button'
 
@@ -9,12 +10,12 @@ import { LogoutButton } from './logout-button'
 // visual sin contador ni datos simulados, para no fabricar información que
 // el backend no produce.
 
-export function Topbar({ nombre, rol }: { nombre: string; rol: RolUsuario }) {
+export function Topbar({ nombre, roles }: { nombre: string; roles: RolUsuario[] }) {
   return (
     <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:px-6">
       <div>
         <p className="text-sm font-semibold text-text-primary">Hola, {nombre}</p>
-        <p className="text-xs text-text-muted">{ROL_LABELS[rol]}</p>
+        <p className="text-xs text-text-muted">{etiquetaRoles(roles)}</p>
       </div>
       <div className="flex items-center gap-3">
         <button

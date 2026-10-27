@@ -1,5 +1,5 @@
 import { getProfile } from "@/lib/auth/dal";
-import { ROL_LABELS } from "@/lib/auth/types";
+import { etiquetaRoles } from "@/lib/auth/roles";
 
 export default async function SinPermisoPage() {
   const profile = await getProfile();
@@ -8,7 +8,7 @@ export default async function SinPermisoPage() {
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center">
       <h1 className="text-xl font-semibold text-text-primary">Sin permiso para esta sección</h1>
       <p className="max-w-md text-text-muted">
-        Tu rol actual ({ROL_LABELS[profile.rol]}) no tiene acceso a esta
+        Tus roles actuales ({etiquetaRoles(profile.roles)}) no tienen acceso a esta
         función. Si crees que deberías tenerlo, contacta a un administrador
         del sistema.
       </p>

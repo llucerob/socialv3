@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
 import { obtenerEntregaAsignadaAlUsuario, aplicarResultadoEntregaSync } from '@/lib/entregas/registro'
 import { obtenerMotivoEntregaFallida } from '@/lib/motivos-entrega/dal'
+import { tieneRol } from '@/lib/auth/roles'
 
 const ROLES_TERRENO = ['administrador', 'terreno_repartidor'] as const
 
@@ -27,7 +28,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return Response.json({ error: 'Selecciona un motivo válido.' }, { status: 400 })
   }
 
-  const entrega = await obtenerEntregaAsignadaAlUsuario(entregaId, profile.id, profile.rol === 'administrador')
+  const entrega = await obtenerEntregaAsignadaAlUsuario(entregaId, profile.id, tieneRol(profile, ['administrador']))
   if (!entrega) {
     return Response.json({ error: 'Entrega no encontrada o no asignada a tu usuario.' }, { status: 404 })
   }

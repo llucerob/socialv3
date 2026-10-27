@@ -1,4 +1,4 @@
-import { NAV_BY_ROL } from '@/lib/dashboard/nav'
+import { navParaRoles } from '@/lib/dashboard/nav'
 import type { RolUsuario } from '@/lib/auth/types'
 import { NavItemsList } from './nav-items'
 
@@ -10,8 +10,8 @@ import { NavItemsList } from './nav-items'
 // Sistema de diseño Coinco (Prompt 1, Paso 3): mismo fondo brand-800 que el
 // sidebar de escritorio, para que NavItemsList comparta un único lenguaje
 // visual sin duplicar estilos por breakpoint.
-export function MobileNav({ rol }: { rol: RolUsuario }) {
-  const items = NAV_BY_ROL[rol]
+export function MobileNav({ roles }: { roles: RolUsuario[] }) {
+  const items = navParaRoles(roles)
 
   return (
     <details className="bg-brand-800 md:hidden">

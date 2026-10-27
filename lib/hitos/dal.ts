@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getProfile } from '@/lib/auth/dal'
 import type { ActiveProfile, RolUsuario } from '@/lib/auth/types'
+import { tieneRol } from '@/lib/auth/roles'
 import type { Hito, HitoConNombres } from './types'
 
 // US-22.03: "hitos e informes sociales son datos sensibles" (CLAUDE.md) —
@@ -26,10 +27,10 @@ export async function requireRoleHitos(
 ): Promise<ActiveProfile> {
   const profile = await getProfile()
 
-  if (!roles.includes(profile.rol)) {
+  if (!tieneRol(profile, roles)) {
     const supabase = await createClient()
     await supabase.from('hitos_accesos_denegados').insert({
-      rol_en_intento: profile.rol,
+      rol_en_intento: profile.roles.join(', '),
       grupo_familiar_id: grupoFamiliarId ?? null,
       ruta,
     })

@@ -39,3 +39,10 @@ export const DASHBOARD_SECTIONS_BY_ROL: Record<RolUsuario, DashboardSectionId[]>
     'alertas',
   ],
 }
+
+// Usuario con varios roles: ve las secciones de todos sus roles, en el
+// orden canónico de DASHBOARD_SECTION_LABELS.
+export function seccionesParaRoles(roles: readonly RolUsuario[]): DashboardSectionId[] {
+  const incluidas = new Set(roles.flatMap((rol) => DASHBOARD_SECTIONS_BY_ROL[rol]))
+  return (Object.keys(DASHBOARD_SECTION_LABELS) as DashboardSectionId[]).filter((id) => incluidas.has(id))
+}

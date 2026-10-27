@@ -74,7 +74,7 @@ export type EventoAuditoria = {
 export type UsuarioAuditoria = {
   id: string
   nombre: string
-  rol: RolUsuario
+  roles: RolUsuario[]
 }
 
 export type FiltrosAuditoria = {

@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { NAV_BY_ROL } from '@/lib/dashboard/nav'
+import { navParaRoles } from '@/lib/dashboard/nav'
 import type { RolUsuario } from '@/lib/auth/types'
 import { NavItemsList } from './nav-items'
 
@@ -9,8 +9,8 @@ import { NavItemsList } from './nav-items'
 // Sistema de diseño Coinco (Prompt 1, Paso 3): fondo brand-800 institucional
 // + escudo. El escudo es un placeholder generado (ver app/escudo-blanco) —
 // reemplazar por el asset oficial cuando exista, sin tocar este layout.
-export function NavSidebar({ rol }: { rol: RolUsuario }) {
-  const items = NAV_BY_ROL[rol]
+export function NavSidebar({ roles }: { roles: RolUsuario[] }) {
+  const items = navParaRoles(roles)
 
   return (
     <nav className="hidden w-56 shrink-0 flex-col bg-brand-800 p-4 md:flex">

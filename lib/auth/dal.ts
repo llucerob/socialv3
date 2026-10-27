@@ -3,6 +3,7 @@ import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { ActiveProfile, RolUsuario } from './types'
+import { tieneRol } from './roles'
 
 export const verifySession = cache(async () => {
   const supabase = await createClient()
@@ -25,11 +26,11 @@ export const getProfile = cache(async (): Promise<ActiveProfile> => {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, nombre, email, rol, estado')
+    .select('id, nombre, email, roles, estado')
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.estado !== 'activo' || !profile.rol) {
+  if (!profile || profile.estado !== 'activo' || !profile.roles?.length) {
     redirect('/sin-acceso')
   }
 
@@ -40,10 +41,10 @@ export const getProfile = cache(async (): Promise<ActiveProfile> => {
 // editar un grupo familiar). Redirige en vez de solo ocultar UI: el checkeo
 // de render no es una barrera de seguridad (una Server Action es alcanzable
 // directamente aunque el formulario esté oculto).
-export async function requireRole(roles: RolUsuario[]) {
+export async function requireRole(roles: readonly RolUsuario[]) {
   const profile = await getProfile()
 
-  if (!roles.includes(profile.rol)) {
+  if (!tieneRol(profile, roles)) {
     redirect('/sin-permiso')
   }
 

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { requireRole } from '@/lib/auth/dal'
 import { listarUsuarios } from '@/lib/usuarios/dal'
 import { ROL_LABELS } from '@/lib/auth/types'
+import { ROLES_ORDENADOS } from '@/lib/auth/roles'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
 
 // US-19.01: "se listan usuarios".
@@ -27,10 +28,21 @@ export default async function UsuariosPage() {
                   <span className="font-medium text-text-primary">{usuario.nombre}</span>
                   <span className="ml-2 text-sm text-text-muted">{usuario.email}</span>
                 </span>
-                <span className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-800">
-                    {usuario.rol ? ROL_LABELS[usuario.rol] : 'Sin rol'}
-                  </span>
+                <span className="flex flex-wrap items-center justify-end gap-2">
+                  {usuario.roles.length === 0 ? (
+                    <span className="rounded-full bg-neutral-bg px-2.5 py-0.5 text-xs font-medium text-neutral-fg">
+                      Sin rol
+                    </span>
+                  ) : (
+                    ROLES_ORDENADOS.filter((rol) => usuario.roles.includes(rol)).map((rol) => (
+                      <span
+                        key={rol}
+                        className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-800"
+                      >
+                        {ROL_LABELS[rol]}
+                      </span>
+                    ))
+                  )}
                   <EstadoBadge estado={usuario.estado} />
                 </span>
               </Link>

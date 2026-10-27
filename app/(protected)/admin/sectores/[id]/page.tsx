@@ -4,6 +4,7 @@ import { obtenerSector, obtenerHistorialSector } from '@/lib/sectores/dal'
 import { cambiarEstadoSector } from '@/lib/sectores/actions'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { tieneRol } from '@/lib/auth/roles'
 
 export default async function FichaSectorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -14,7 +15,7 @@ export default async function FichaSectorPage({ params }: { params: Promise<{ id
     notFound()
   }
 
-  const puedeGestionar = profile.rol === 'administrador'
+  const puedeGestionar = tieneRol(profile, ['administrador'])
   const historial = puedeGestionar ? await obtenerHistorialSector(id) : []
   const cambiarEstadoConId = cambiarEstadoSector.bind(null, sector.id)
 

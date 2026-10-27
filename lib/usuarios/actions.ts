@@ -4,62 +4,57 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/dal'
 import type { RolUsuario, EstadoUsuario } from '@/lib/auth/types'
+import { ROLES_ORDENADOS } from '@/lib/auth/roles'
 
 const ROLES_GESTION_USUARIOS = ['administrador'] as const
 
-const ROLES_VALIDOS: RolUsuario[] = [
-  'administrador',
-  'evaluador_social',
-  'aprobador',
-  'bodega_logistica',
-  'terreno_repartidor',
-  'finanzas',
-  'auditor_consulta',
-]
+const ROLES_VALIDOS = ROLES_ORDENADOS
 
 export type UsuarioFormState = { error?: string } | undefined
 
-// US-19.01: "se puede cambiar rol". No se permite que un administrador se
-// cambie el rol a sí mismo — a diferencia del resto de catálogos de este
-// EPIC, aquí un error de este tipo puede dejar al sistema sin ningún
-// administrador activo (bootstrap_admin() solo actúa en la creación de la
-// cuenta, no restaura un admin existente). No es un criterio de aceptación
-// explícito de la historia, pero es la misma clase de salvaguarda que ya
-// impide, por ejemplo, aprobar un reembolso por sobre su tope: una regla de
-// negocio de sentido común, no una validación de un caso que no puede pasar.
-export async function cambiarRolUsuario(
+// US-19.01: "se puede cambiar rol". Un usuario puede tener varios roles
+// (equipo chico: la misma persona evalúa y aprueba, o aprueba y lleva
+// bodega). El administrador puede ajustar también sus propios roles, pero
+// no quitarse "administrador" a sí mismo: eso podría dejar al sistema sin
+// ningún administrador activo (bootstrap_admin() solo actúa al crear la
+// cuenta, no restaura un admin existente). El cambio queda en
+// profiles_historial vía log_profile_cambio.
+export async function cambiarRolesUsuario(
   id: string,
   _prevState: UsuarioFormState,
   formData: FormData
 ): Promise<UsuarioFormState> {
   const profile = await requireRole([...ROLES_GESTION_USUARIOS])
 
-  if (id === profile.id) {
-    return { error: 'No puedes cambiar tu propio rol.' }
+  const marcados = formData.getAll('roles').map((valor) => valor.toString())
+  if (marcados.some((rol) => !ROLES_VALIDOS.includes(rol as RolUsuario))) {
+    return { error: 'Selecciona solo roles válidos.' }
   }
+  // Orden canónico, así el historial no registra un "cambio" que solo
+  // reordena los mismos roles.
+  const roles = ROLES_VALIDOS.filter((rol) => marcados.includes(rol))
 
-  const nuevoRol = formData.get('rol')?.toString() ?? ''
-  if (!ROLES_VALIDOS.includes(nuevoRol as RolUsuario)) {
-    return { error: 'Selecciona un rol válido.' }
+  if (id === profile.id && !roles.includes('administrador')) {
+    return { error: 'No puedes quitarte el rol de administrador a ti mismo.' }
   }
 
   const supabase = await createClient()
-  const { error } = await supabase
-    .from('profiles')
-    .update({ rol: nuevoRol as RolUsuario })
-    .eq('id', id)
+  const { error } = await supabase.from('profiles').update({ roles }).eq('id', id)
 
   if (error) {
-    return { error: 'No se pudo cambiar el rol del usuario.' }
+    return { error: 'No se pudieron cambiar los roles del usuario.' }
   }
 
   revalidatePath(`/admin/usuarios/${id}`)
   revalidatePath('/admin/usuarios')
+  // Si el administrador cambió sus propios roles, su menú cambia de
+  // inmediato.
+  if (id === profile.id) revalidatePath('/', 'layout')
 }
 
-// US-19.01: "se puede activar o desactivar usuario". Mismo bloqueo de
-// autoedición que cambiarRolUsuario, y por la misma razón: un administrador
-// no puede desactivarse a sí mismo.
+// US-19.01: "se puede activar o desactivar usuario". Un administrador no
+// puede desactivarse a sí mismo, por la misma razón que no puede quitarse
+// el rol de administrador (ver cambiarRolesUsuario).
 export async function cambiarEstadoUsuario(
   id: string,
   _prevState: UsuarioFormState,

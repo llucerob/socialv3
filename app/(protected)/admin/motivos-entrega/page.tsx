@@ -3,12 +3,13 @@ import { getProfile } from '@/lib/auth/dal'
 import { listarMotivosEntregaFallida } from '@/lib/motivos-entrega/dal'
 import { ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { tieneRol } from '@/lib/auth/roles'
 
 // US-19.03: "se pueden crear/activar/desactivar motivos [de entrega fallida]".
 export default async function MotivosEntregaFallidaPage() {
   const profile = await getProfile()
   const motivos = await listarMotivosEntregaFallida()
-  const puedeGestionar = profile.rol === 'administrador'
+  const puedeGestionar = tieneRol(profile, ['administrador'])
 
   return (
     <div className="space-y-6">

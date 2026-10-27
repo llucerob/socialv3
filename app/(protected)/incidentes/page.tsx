@@ -13,6 +13,7 @@ import { ButtonLink } from '@/components/ui/Button'
 import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { formatearFecha } from '@/lib/fechas'
+import { tieneRol } from '@/lib/auth/roles'
 
 // US-26.02: "acceso restringido a administrador/auditor".
 const ROLES_VER_INCIDENTES = ['administrador', 'auditor_consulta'] as const
@@ -45,7 +46,7 @@ export default async function IncidentesPage({ searchParams }: { searchParams: P
     estado: esEstadoValido(estado) ? estado : undefined,
   })
 
-  const puedeGestionar = (ROLES_GESTION_INCIDENTES as readonly string[]).includes(profile.rol)
+  const puedeGestionar = tieneRol(profile, ROLES_GESTION_INCIDENTES)
   const hayFiltros = fecha_desde || fecha_hasta || tipo || estado
   const claseCampo = 'rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary'
 

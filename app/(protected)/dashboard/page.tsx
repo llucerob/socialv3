@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { getProfile } from "@/lib/auth/dal";
-import { ROL_LABELS } from "@/lib/auth/types";
 import type { RolUsuario } from "@/lib/auth/types";
 import {
-  DASHBOARD_SECTIONS_BY_ROL,
+  seccionesParaRoles,
   DASHBOARD_SECTION_LABELS,
   type DashboardSectionId,
 } from "@/lib/dashboard/sections";
-import { NAV_BY_ROL } from "@/lib/dashboard/nav";
+import { navParaRoles } from "@/lib/dashboard/nav";
 import { listarEntregasPendientesParaDashboard } from "@/lib/entregas/dal";
 import { listarSolicitudesEnEvaluacionSinEvaluar } from "@/lib/solicitudes/dal";
 import type { EstadoSolicitud } from "@/lib/solicitudes/types";
@@ -21,6 +20,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { EstadoBadge } from "@/components/ui/EstadoBadge";
 import { iniciales } from "@/components/ui/texto";
 import { formatearFecha } from "@/lib/fechas";
+import { etiquetaRoles, tieneRol } from "@/lib/auth/roles";
 
 // Sistema de diseño Coinco (Prompt 2, Paso 1) — /dashboard es UNA sola ruta
 // compartida por todos los roles (cada uno ve un subconjunto de
@@ -49,8 +49,8 @@ const ROLES_ALERTA_GEORREFERENCIAR: RolUsuario[] = ["administrador", "bodega_log
 
 export default async function DashboardPage() {
   const profile = await getProfile();
-  const secciones = DASHBOARD_SECTIONS_BY_ROL[profile.rol];
-  const accesosRapidos = NAV_BY_ROL[profile.rol].filter(
+  const secciones = seccionesParaRoles(profile.roles);
+  const accesosRapidos = navParaRoles(profile.roles).filter(
     (item) => item.disponible && item.href !== "/dashboard"
   );
 
@@ -62,10 +62,10 @@ export default async function DashboardPage() {
         ? listarSolicitudesPendientesAprobacionDashboard()
         : Promise.resolve([]),
       secciones.includes("reembolsos_pendientes") ? listarReembolsosPendientesPagoDashboard() : Promise.resolve([]),
-      secciones.includes("alertas") && ROLES_ALERTA_RSH.includes(profile.rol)
+      secciones.includes("alertas") && tieneRol(profile, ROLES_ALERTA_RSH)
         ? listarHogaresConRshDesactualizado()
         : Promise.resolve([]),
-      secciones.includes("alertas") && ROLES_ALERTA_GEORREFERENCIAR.includes(profile.rol)
+      secciones.includes("alertas") && tieneRol(profile, ROLES_ALERTA_GEORREFERENCIAR)
         ? listarHogaresPendientesGeoreferenciar()
         : Promise.resolve([]),
     ]);
@@ -90,14 +90,17 @@ export default async function DashboardPage() {
     reembolsos_pendientes: reembolsosPendientes.length,
   };
 
-  const hayAlertas = secciones.includes("alertas") && (hogaresRsh.length > 0 || hogaresSinGeorreferenciar.length > 0);
+  const soloTerreno =
+    tieneRol(profile, ["terreno_repartidor"]) && !tieneRol(profile, ["administrador", "bodega_logistica", "auditor_consulta"]);
+
+  const hayAlertas =secciones.includes("alertas") && (hogaresRsh.length > 0 || hogaresSinGeorreferenciar.length > 0);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-text-primary">Bienvenido, {profile.nombre}</h1>
         <p className="mt-1 text-sm text-text-muted">
-          Panel principal · {ROL_LABELS[profile.rol]}
+          Panel principal · {etiquetaRoles(profile.roles)}
         </p>
       </div>
 
@@ -162,17 +165,17 @@ export default async function DashboardPage() {
               titulo="Entregas pendientes"
               items={entregasPendientes}
               getKey={(e) => e.entrega_id}
-              getHref={(e) =>
-                profile.rol === "terreno_repartidor" ? `/mis-entregas/${e.entrega_id}` : e.ruta
-              }
+              // Con varios roles manda la vista de gestión (ve todas las
+              // entregas); la de terreno queda para quien solo reparte.
+              getHref={(e) => (soloTerreno ? `/mis-entregas/${e.entrega_id}` : e.ruta)}
               getLinea={(e) => `${e.tipo_ayuda_nombre} · ${e.direccion}`}
               getDetalle={(e) => formatearFecha(e.fecha_programada)}
               vacio="Sin entregas pendientes."
               hrefVerTodas={
-                profile.rol === "terreno_repartidor"
-                  ? "/mis-entregas"
-                  : profile.rol === "administrador" || profile.rol === "bodega_logistica"
-                    ? "/entregas"
+                tieneRol(profile, ["administrador", "bodega_logistica"])
+                  ? "/entregas"
+                  : tieneRol(profile, ["terreno_repartidor"])
+                    ? "/mis-entregas"
                     : undefined
               }
             />

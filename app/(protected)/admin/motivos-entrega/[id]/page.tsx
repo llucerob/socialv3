@@ -4,6 +4,7 @@ import { obtenerMotivoEntregaFallida, obtenerHistorialMotivoEntregaFallida } fro
 import { cambiarEstadoMotivoEntregaFallida } from '@/lib/motivos-entrega/actions'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { tieneRol } from '@/lib/auth/roles'
 
 export default async function FichaMotivoEntregaFallidaPage({
   params,
@@ -18,7 +19,7 @@ export default async function FichaMotivoEntregaFallidaPage({
     notFound()
   }
 
-  const puedeGestionar = profile.rol === 'administrador'
+  const puedeGestionar = tieneRol(profile, ['administrador'])
   const historial = puedeGestionar ? await obtenerHistorialMotivoEntregaFallida(id) : []
   const cambiarEstadoConId = cambiarEstadoMotivoEntregaFallida.bind(null, motivo.id)
 

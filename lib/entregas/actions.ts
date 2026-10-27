@@ -9,6 +9,7 @@ import { subirDocumentoSolicitud } from '@/lib/documentos/actions'
 import { listarDocumentosDeSolicitud } from '@/lib/documentos/dal'
 import { obtenerMotivoEntregaFallida } from '@/lib/motivos-entrega/dal'
 import { obtenerEntregaAsignadaAlUsuario } from '@/lib/entregas/registro'
+import { tieneRol } from '@/lib/auth/roles'
 
 // US-12.01/US-12.02: "como bodega o logística" crea y asigna entregas.
 const ROLES_LOGISTICA = ['administrador', 'bodega_logistica'] as const
@@ -219,7 +220,7 @@ export async function registrarEntregaRealizada(
   const entrega = await obtenerEntregaAsignadaAlUsuario(
     entregaId,
     profile.id,
-    profile.rol === 'administrador'
+    tieneRol(profile, ['administrador'])
   )
   if (!entrega) {
     return { error: 'Entrega no encontrada o no asignada a tu usuario.', valores }
@@ -311,7 +312,7 @@ export async function registrarEntregaFallida(
   const entrega = await obtenerEntregaAsignadaAlUsuario(
     entregaId,
     profile.id,
-    profile.rol === 'administrador'
+    tieneRol(profile, ['administrador'])
   )
   if (!entrega) {
     return { error: 'Entrega no encontrada o no asignada a tu usuario.', valores }

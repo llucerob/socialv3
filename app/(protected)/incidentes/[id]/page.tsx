@@ -11,6 +11,7 @@ import { NotificarIncidenteForm } from '../notificar-incidente-form'
 import { Card } from '@/components/ui/Card'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { formatearFecha } from '@/lib/fechas'
+import { tieneRol } from '@/lib/auth/roles'
 
 const ROLES_VER_INCIDENTES = ['administrador', 'auditor_consulta'] as const
 const ROLES_GESTION_INCIDENTES = ['administrador'] as const
@@ -24,7 +25,7 @@ export default async function DetalleIncidentePage({ params }: { params: Promise
     notFound()
   }
 
-  const puedeGestionar = (ROLES_GESTION_INCIDENTES as readonly string[]).includes(profile.rol)
+  const puedeGestionar = tieneRol(profile, ROLES_GESTION_INCIDENTES)
   const historial = await obtenerHistorialIncidente(id)
   const usuarios = puedeGestionar && !incidente.notificacion_fecha ? await listarUsuarios() : []
 

@@ -6,6 +6,7 @@ import type { TipoAyuda } from '@/lib/ayudas/types'
 import { Card } from '@/components/ui/Card'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { tieneRol } from '@/lib/auth/roles'
 
 const REGLAS: { campo: keyof TipoAyuda; label: string }[] = [
   { campo: 'requiere_aprobacion', label: 'Requiere aprobación' },
@@ -28,7 +29,7 @@ export default async function FichaTipoAyudaPage({
     notFound()
   }
 
-  const puedeGestionar = profile.rol === 'administrador'
+  const puedeGestionar = tieneRol(profile, ['administrador'])
   const historial = puedeGestionar ? await obtenerHistorialTipoAyuda(id) : []
   const cambiarEstadoConId = cambiarEstadoTipoAyuda.bind(null, tipoAyuda.id)
 

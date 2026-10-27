@@ -6,6 +6,7 @@ import { obtenerSolicitud } from '@/lib/solicitudes/dal'
 import { obtenerTipoAyuda } from '@/lib/ayudas/dal'
 import { listarDocumentosDeSolicitud } from '@/lib/documentos/dal'
 import { subirDocumentoSolicitud } from '@/lib/documentos/actions'
+import { tieneRol } from '@/lib/auth/roles'
 
 const ROLES_TERRENO = ['administrador', 'terreno_repartidor'] as const
 
@@ -36,7 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return Response.json({ error: 'Falta la fecha de captura original.' }, { status: 400 })
   }
 
-  const entrega = await obtenerEntregaAsignadaAlUsuario(entregaId, profile.id, profile.rol === 'administrador')
+  const entrega = await obtenerEntregaAsignadaAlUsuario(entregaId, profile.id, tieneRol(profile, ['administrador']))
   if (!entrega) {
     return Response.json({ error: 'Entrega no encontrada o no asignada a tu usuario.' }, { status: 404 })
   }

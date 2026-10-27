@@ -3,6 +3,7 @@ import { requireRole } from '@/lib/auth/dal'
 import { buscarGruposFamiliares } from '@/lib/hogares/dal'
 import { RshBadge } from './rsh-badge'
 import { GeorreferenciacionBadge } from './georreferenciacion-badge'
+import { tieneRol } from '@/lib/auth/roles'
 
 // US-20.02: "terreno no ve historial completo del hogar" — terreno no tiene
 // enlace de nav a este módulo (lib/dashboard/nav.ts), pero antes de esta
@@ -25,7 +26,7 @@ export default async function HogaresPage({
   const profile = await requireRole([...ROLES_VER_HOGARES])
   const { q = '' } = await searchParams
   const hogares = await buscarGruposFamiliares(q)
-  const puedeCrear = profile.rol === 'administrador' || profile.rol === 'evaluador_social'
+  const puedeCrear = tieneRol(profile, ['administrador', 'evaluador_social'])
 
   return (
     <div className="space-y-6">

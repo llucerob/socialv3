@@ -72,40 +72,42 @@ import { EstadoBadge } from '@/components/ui/EstadoBadge'
 import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
 import { BannerSensible } from '@/components/ui/BannerSensible'
 import { formatearFecha } from '@/lib/fechas'
+import { tieneRol } from '@/lib/auth/roles'
+import type { RolUsuario } from '@/lib/auth/types'
 
 // EPIC 07: gestión general de la solicitud (crear, editar, enviar, anular).
-const ROLES_GESTION_SOLICITUD = ['administrador', 'evaluador_social']
+const ROLES_GESTION_SOLICITUD: RolUsuario[] = ['administrador', 'evaluador_social']
 // US-08.01: solo evaluador social/administrador registran evaluaciones.
-const ROLES_EVALUAR = ['administrador', 'evaluador_social']
+const ROLES_EVALUAR: RolUsuario[] = ['administrador', 'evaluador_social']
 // US-08.03: "Como evaluador o aprobador" — el único punto de EPIC 08 donde
 // el aprobador también actúa.
-const ROLES_OBSERVAR = ['administrador', 'evaluador_social', 'aprobador']
+const ROLES_OBSERVAR: RolUsuario[] = ['administrador', 'evaluador_social', 'aprobador']
 // US-09.01/09.02: "solo rol aprobador puede aprobar/rechazar" — evaluador_social
 // NO puede decidir (a diferencia de EPIC 07/08).
-const ROLES_APROBACION = ['administrador', 'aprobador']
+const ROLES_APROBACION: RolUsuario[] = ['administrador', 'aprobador']
 // Contenido sensible (evaluaciones, historial de ayudas del hogar, auditoría)
 // restringido según CLAUDE.md: evaluador social/aprobador/administrador.
-const ROLES_VER_SENSIBLE = ['administrador', 'evaluador_social', 'aprobador']
+const ROLES_VER_SENSIBLE: RolUsuario[] = ['administrador', 'evaluador_social', 'aprobador']
 // US-11.03: "como bodega" registra la salida de stock una vez aprobada la
 // solicitud — mismo criterio de EPIC 11 (lib/inventario/actions.ts).
-const ROLES_STOCK = ['administrador', 'bodega_logistica']
+const ROLES_STOCK: RolUsuario[] = ['administrador', 'bodega_logistica']
 // US-12.01/US-12.02: "como bodega o logística" crea y asigna entregas.
-const ROLES_LOGISTICA = ['administrador', 'bodega_logistica']
+const ROLES_LOGISTICA: RolUsuario[] = ['administrador', 'bodega_logistica']
 // US-14.04: "solo finanzas o administrador puede registrar pago".
-const ROLES_FINANZAS = ['administrador', 'finanzas']
+const ROLES_FINANZAS: RolUsuario[] = ['administrador', 'finanzas']
 // US-14.02: "como finanzas o evaluador autorizado" valida documentos de reembolso.
-const ROLES_VALIDAR_DOCUMENTOS = ['administrador', 'evaluador_social', 'finanzas']
+const ROLES_VALIDAR_DOCUMENTOS: RolUsuario[] = ['administrador', 'evaluador_social', 'finanzas']
 // US-15.05: "solo rol autorizado puede aprobar excepción" al tope de diálisis.
-const ROLES_EXCEPCION_DIALISIS = ['administrador']
+const ROLES_EXCEPCION_DIALISIS: RolUsuario[] = ['administrador']
 // US-05.05: "solo roles autorizados (aprobador/administrador) pueden
 // registrar la excepción" — a diferencia de la excepción de diálisis.
-const ROLES_EXCEPCION_RSH = ['administrador', 'aprobador']
+const ROLES_EXCEPCION_RSH: RolUsuario[] = ['administrador', 'aprobador']
 // US-20.02: "terreno no ve historial completo del hogar" — terreno_repartidor
 // no aparece en ninguna de las listas de arriba (no gestiona, evalúa,
 // aprueba, ni maneja stock/pago de una solicitud) y no tiene enlace de nav a
 // este módulo; antes de esta historia, una navegación directa por URL sí
 // llegaba. El resto de roles válidos mantiene el mismo acceso que ya tenía.
-const ROLES_VER_SOLICITUD = [
+const ROLES_VER_SOLICITUD: RolUsuario[] = [
   'administrador',
   'evaluador_social',
   'aprobador',
@@ -141,24 +143,24 @@ export default async function DetalleSolicitudPage({
     notFound()
   }
 
-  const puedeGestionar = ROLES_GESTION_SOLICITUD.includes(profile.rol)
-  const puedeEvaluar = ROLES_EVALUAR.includes(profile.rol)
-  const puedeObservar = ROLES_OBSERVAR.includes(profile.rol)
-  const puedeAprobar = ROLES_APROBACION.includes(profile.rol)
-  const puedeVerSensible = ROLES_VER_SENSIBLE.includes(profile.rol)
-  const puedeVerStock = ROLES_STOCK.includes(profile.rol)
+  const puedeGestionar = tieneRol(profile, ROLES_GESTION_SOLICITUD)
+  const puedeEvaluar = tieneRol(profile, ROLES_EVALUAR)
+  const puedeObservar = tieneRol(profile, ROLES_OBSERVAR)
+  const puedeAprobar = tieneRol(profile, ROLES_APROBACION)
+  const puedeVerSensible = tieneRol(profile, ROLES_VER_SENSIBLE)
+  const puedeVerStock = tieneRol(profile, ROLES_STOCK)
   const puedeRegistrarSalidaStock = puedeVerStock && ESTADOS_CON_SALIDA_STOCK.includes(solicitud.estado)
-  const puedeGestionarEntregas = ROLES_LOGISTICA.includes(profile.rol)
-  const puedeRegistrarPago = ROLES_FINANZAS.includes(profile.rol)
+  const puedeGestionarEntregas = tieneRol(profile, ROLES_LOGISTICA)
+  const puedeRegistrarPago = tieneRol(profile, ROLES_FINANZAS)
   // US-18.04: solo administrador define estado de conservación o elimina un documento.
-  const puedeGestionarRetencion = profile.rol === 'administrador'
+  const puedeGestionarRetencion = tieneRol(profile, ['administrador'])
 
   const historial = puedeVerSensible ? await obtenerHistorialSolicitud(id) : []
   const evaluaciones = puedeVerSensible ? await listarEvaluacionesDeSolicitud(id) : []
   const decision = puedeVerSensible ? await obtenerDecisionDeSolicitud(id) : null
   const tipoAyuda = await obtenerTipoAyuda(solicitud.tipo_ayuda_id)
   const esReembolso = tipoAyuda?.tipo === 'reembolso'
-  const puedeValidarDocumentos = ROLES_VALIDAR_DOCUMENTOS.includes(profile.rol) && esReembolso
+  const puedeValidarDocumentos = tieneRol(profile, ROLES_VALIDAR_DOCUMENTOS) && esReembolso
   const validarDocumentoConId = puedeValidarDocumentos ? validarDocumento : undefined
 
   // US-14.05: tope calculado, solo relevante mientras hay una decisión
@@ -187,7 +189,7 @@ export default async function DetalleSolicitudPage({
         )
       : undefined
   const puedeAprobarExcepcionDialisis =
-    ROLES_EXCEPCION_DIALISIS.includes(profile.rol) && esDialisis && solicitud.estado === 'en_evaluacion'
+    tieneRol(profile, ROLES_EXCEPCION_DIALISIS) && esDialisis && solicitud.estado === 'en_evaluacion'
 
   // 🆕 EPIC 25 (US-25.02/25.03/25.05): remanente anual compartido, solo
   // relevante mientras hay una decisión pendiente sobre un reembolso
@@ -213,8 +215,8 @@ export default async function DetalleSolicitudPage({
   // quien puede aprobar.
   const hogar = puedeVerSensible ? await obtenerGrupoFamiliar(solicitud.grupo_familiar_id) : null
   const rshSuperaUmbral = superaUmbralElegibilidad(hogar?.tramo_rsh ?? null)
-  const puedeVerInformes = ROLES_VER_INFORMES.includes(profile.rol)
-  const puedeRegistrarInformes = ROLES_REGISTRAR_INFORMES.includes(profile.rol)
+  const puedeVerInformes = tieneRol(profile, ROLES_VER_INFORMES)
+  const puedeRegistrarInformes = tieneRol(profile, ROLES_REGISTRAR_INFORMES)
   // US-23.02/US-23.03: "la referencia es visible desde ambos lados" — este
   // es el lado caso → informe.
   const informesSociales = puedeVerInformes ? await listarInformesSocialesDeSolicitud(id) : []
@@ -224,7 +226,7 @@ export default async function DetalleSolicitudPage({
   const totalInformesSociales = puedeVerInformes ? await contarInformesSocialesDeSolicitud(id) : 0
   const informesNoVisibles = totalInformesSociales - informesSociales.length
   const puedeAprobarExcepcionRsh =
-    ROLES_EXCEPCION_RSH.includes(profile.rol) && rshSuperaUmbral && solicitud.estado === 'en_evaluacion'
+    tieneRol(profile, ROLES_EXCEPCION_RSH) && rshSuperaUmbral && solicitud.estado === 'en_evaluacion'
 
   // US-14.04: "registrar pago de reembolso" — solo aplica a ayudas de tipo
   // reembolso, una vez aprobadas. Se lee el monto aprobado directamente
@@ -756,6 +758,11 @@ export default async function DetalleSolicitudPage({
             {decision.cantidad_aprobada !== null && (
               <p className="mt-1 text-sm text-text-primary">
                 Cantidad/detalle aprobado: {decision.cantidad_aprobada}
+              </p>
+            )}
+            {decision.decidida_por_quien_evaluo && (
+              <p className="mt-2 rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
+                Evaluada y decidida por la misma persona.
               </p>
             )}
             {decision.autoridad_solicitante && (
