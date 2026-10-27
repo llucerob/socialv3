@@ -64,6 +64,8 @@ Como administrador técnico, quiero separar ambientes de desarrollo y producció
 **Estado (cierre Sprint 0):** "permisos definidos por rol", "vistas adaptadas al rol" y "usuario sin rol válido no opera" están verificados extensamente (RLS + dashboard/nav por rol en EPIC 02–09). "Rol asignable por usuario" solo existe hoy a nivel de datos (un admin puede hacer `UPDATE profiles.rol` porque la RLS lo permite) — **no hay ninguna pantalla en la app para asignar roles**; hay que usar el SQL Editor/Table Editor de Supabase Studio directamente. La UI real de esto es **US-19.01 "Administrar usuarios", agendada para Sprint 7 (Post-MVP inmediato)** — depende explícitamente de un sprint futuro, no es un olvido de este sprint.
 **Estado (revisión posterior):** los 4 criterios quedan completos — **US-19.01 ya está implementada** (`/admin/usuarios`, `lib/usuarios/actions.ts::cambiarRolUsuario`), cerrando la única brecha pendiente. Re-verificado end-to-end en navegador con un usuario nuevo genuino (creado vía Admin API, sin rol): al iniciar sesión sin rol asignado queda redirigido a `/sin-acceso` con mensaje explícito ("usuario sin rol válido no opera") · un administrador le asignó el rol `bodega_logistica` desde `/admin/usuarios/{id}`, quedando auditado en el historial de cambios del usuario (`profiles_historial`) · al volver a iniciar sesión, el usuario accedió con el dashboard y el nav lateral correctos para ese rol (solo "Entregas pendientes" y "Alertas", esta última mostrando únicamente la alerta de georreferenciación — no la de RSH, que no le corresponde). No se encontró nada pendiente de implementar.
 
+**Revisión 2026-10-27 (roles múltiples):** un usuario puede tener varios roles y el administrador los asigna con casillas. Criterios actualizados y decisiones en `docs/backlog.md`, sección "EPIC 01 y EPIC 19 — Roles múltiples por usuario".
+
 ### US-01.04 ✅ — Proteger rutas por autenticación
 **Prioridad:** P0 · **Dependencias:** US-01.01, US-01.03.
 **Criterios de aceptación:** rutas privadas requieren sesión · redirección a login si no autenticado · acceso al panel si autenticado · rutas sensibles validan rol.
@@ -440,6 +442,8 @@ para permitir la entrega de la ayuda cuando exista justificación social o autor
 *(sin cambios)*
 
 ### US-19.01 — Administrar usuarios — P1 ✅
+**Revisión 2026-10-27 (roles múltiples):** un usuario puede tener varios roles y el administrador los asigna con casillas. Criterios actualizados y decisiones en `docs/backlog.md`, sección "EPIC 01 y EPIC 19 — Roles múltiples por usuario".
+
 ### US-19.02 — Administrar sectores — P1 ✅
 ### US-19.03 — Administrar motivos de entrega fallida — P2 ✅
 

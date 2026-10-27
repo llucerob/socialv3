@@ -13,6 +13,7 @@
 - Actualización de sprints, backlog mínimo imprescindible, historias post-MVP, riesgos y resultado esperado.
 - 🆕 **Recomendación técnica agregada a US-13.04:** librería (`@turf/turf`), algoritmo de referencia (vecino más cercano) y camino de evolución futuro (PostGIS / OSRM), como cierre de la revisión de los EPICs nuevos (13, 25, 26 y 27). Los EPICs 25, 26 y 27 se revisaron y no requirieron cambios adicionales de contenido — quedan tal como se definieron en esta versión.
 - 🆕 **EPIC 14 revisado — cálculo automático de tramos del reembolso general:** se agregan US-14.05 (calcular número de reembolso y tope), US-14.06 (bloquear fuera de tope) y US-14.07 (validar período febrero-noviembre), cerrando el último gap funcional pendiente. Decisión confirmada: el tope anual de $100.000 es **por grupo familiar**, compartido entre reembolsos generales y excepcionales — US-25.02 pasa a ser la fuente única de ese cálculo, reutilizada por ambos EPICs.
+- 🆕 **EPIC 01 / EPIC 19 revisados — roles múltiples por usuario (2026-10-27):** un usuario puede tener varios roles y el administrador los asigna desde la ficha del usuario. Ver la sección "EPIC 01 y EPIC 19 — Roles múltiples por usuario" más abajo.
 
 ---
 
@@ -26,7 +27,60 @@
 
 ## EPICs 00–02, 04, 06–12, 14–24 — sin cambios respecto a la v2
 
-*(Se omiten aquí por brevedad; el contenido completo de estos EPICs — preparación técnica, autenticación y roles, panel principal, personas integrantes, catálogo de ayudas, solicitudes, evaluación social, aprobación y rechazo, documentos, entregas en domicilio, reembolsos médicos general y diálisis, auditoría, reportes, protección de datos, administración, hitos, informes sociales y compras municipales — se mantiene exactamente igual que en `Backlog_MVP_v2_Sistema_de_Ayudas_Sociales.md`. Este documento v3 solo detalla los EPICs modificados o nuevos: EPIC 03, EPIC 13, EPIC 20, EPIC 21, EPIC 25, EPIC 26 y EPIC 27.)*
+*(Se omiten aquí por brevedad; el contenido completo de estos EPICs — preparación técnica, autenticación y roles, panel principal, personas integrantes, catálogo de ayudas, solicitudes, evaluación social, aprobación y rechazo, documentos, entregas en domicilio, reembolsos médicos general y diálisis, auditoría, reportes, protección de datos, administración, hitos, informes sociales y compras municipales — se mantiene exactamente igual que en `Backlog_MVP_v2_Sistema_de_Ayudas_Sociales.md`. Este documento v3 solo detalla los EPICs modificados o nuevos: EPIC 03, EPIC 13, EPIC 20, EPIC 21, EPIC 25, EPIC 26 y EPIC 27. Excepción: EPIC 01 y EPIC 19 se revisaron después de cerrada la v3 para admitir roles múltiples, ver la sección siguiente.)*
+
+---
+
+## EPIC 01 y EPIC 19 — Roles múltiples por usuario 🆕 (revisión 2026-10-27)
+
+**Motivo.** La v2 definió siete roles (US-01.03) y le asignaba exactamente uno a cada usuario. Ese modelo sirve en un equipo grande, pero el Departamento Social de Coinco es chico: la misma persona evalúa y aprueba, o aprueba y lleva la bodega. Con un solo rol por usuario, esa persona no podía hacer su trabajo sin recibir el rol de administrador, que le da acceso a todo. También queda resuelta la nota de trazabilidad del Contexto Maestro (sección 44) sobre "Administrativo Social", "Encargado de Compras" y "Jefatura/Dirección": se cubren combinando los roles existentes, sin crear roles nuevos.
+
+**Los siete roles se mantienen.** Lo que cambia es que se combinan:
+
+| Rol | Qué habilita |
+|---|---|
+| Administrador | Todo el sistema: catálogos, usuarios, incidentes y cualquier acción de los demás roles. |
+| Evaluador social | Hogares, integrantes y solicitudes; evaluación social, hitos e informes sociales. |
+| Aprobador | Aprueba y rechaza solicitudes (incluida la excepción RSH); lee evaluaciones, hitos e informes. |
+| Bodega / logística | Inventario, proveedores, compras y gestión de entregas. |
+| Terreno / repartidor | Sus entregas asignadas y rutas, con registro del resultado (también offline). |
+| Finanzas | Validación de boletas y registro de pagos de reembolsos. |
+| Auditor / consulta | Solo lectura: auditoría, incidentes y reportes. |
+
+### US-01.03 ✅ — Definir roles del sistema (revisada)
+**Criterios de aceptación actualizados:**
+- Un usuario puede tener uno o varios roles.
+- Cada permiso se concede si el usuario tiene **alguno** de los roles que lo habilitan (unión de permisos). En las reglas de visibilidad (documentos sensibles, informes sociales, entregas) el usuario ve la unión de lo que permite cada uno de sus roles.
+- Las vistas se adaptan a la combinación: el menú y el dashboard muestran la unión de los de cada rol, sin entradas repetidas y en un orden fijo.
+- Un usuario sin ningún rol, o con la cuenta inactiva, no opera (sin cambios respecto de la v2).
+
+### US-19.01 ✅ — Administrar usuarios (revisada)
+**Criterios de aceptación actualizados:**
+- El administrador asigna los roles de cada usuario con una casilla por rol, con la descripción de lo que habilita cada uno.
+- Cada cambio de roles queda auditado en el historial del usuario (antes y después, con etiquetas legibles).
+- El administrador puede ajustar sus propios roles (por ejemplo, sumarse "Aprobador"), pero no puede quitarse "Administrador" ni desactivar su propia cuenta, para que el sistema nunca quede sin administrador.
+
+### Decisiones de negocio tomadas en esta revisión
+1. **Evaluar y decidir la misma solicitud se permite, pero nunca en silencio.** Con roles múltiples, una persona puede tener evaluador y aprobador. Si registró una evaluación social de la solicitud y después la aprueba o la rechaza, la decisión queda marcada como "Evaluada y decidida por la misma persona", en la propia solicitud y en su historial (que también recorre la auditoría, EPIC 16). No se bloquea porque en un equipo chico a veces hay una sola jefatura; se deja trazado, en la misma línea que "las excepciones nunca se ocultan".
+2. **El aprobador lee informes sociales de confidencialidad alta.** Quien decide una excepción (RSH o reembolso excepcional) puede leer el informe en que se apoya. Confidencialidad alta sigue oculta para finanzas, bodega, terreno y auditor.
+
+### Implementación
+- **Datos:** `profiles.roles` (lista de `rol_usuario`) reemplaza a `profiles.rol`. La migración copia el rol actual de cada usuario a la lista, así que nadie pierde acceso. Se eliminan `profiles.rol` y la función `current_role()`.
+- **Base de datos:** `tiene_rol(array[...])` y `tiene_algun_rol()` reemplazan a `current_role()` en 50 políticas RLS y en todas las funciones SQL que preguntaban por el rol (migración `20260818000001_roles_multiples.sql`). Las funciones de visibilidad (`puede_ver_documento`, `puede_ver_informe_social`, el listado de entregas pendientes) se reescribieron a mano para devolver la unión de permisos.
+- **Marca de misma persona:** columna `decisiones_solicitud.decidida_por_quien_evaluo`, calculada por un trigger al insertar la decisión, así cubre los cuatro caminos de decisión (aprobación regular, excepción RSH, excepción de diálisis y rechazo) (migración `20260818000002_decision_misma_persona.sql`).
+- **App:** `tieneRol(profile, ROLES_X)` en `lib/auth/roles.ts` reemplaza las comparaciones con un solo rol; `navParaRoles()` y `seccionesParaRoles()` combinan el menú y el dashboard.
+
+### Verificación
+- Matriz de lectura por usuario sobre las 33 tablas con RLS: cada rol individual ve lo que le corresponde y un usuario sin roles no ve nada (salvo su propio perfil).
+- Combinaciones probadas en la base: evaluador + aprobador (evalúa, decide y la decisión queda marcada; un aprobador que no evaluó no queda marcado), aprobador + bodega (ve inventario y evaluaciones, no puede evaluar), terreno + bodega (ve todas las entregas pendientes, no solo las propias), finanzas + bodega (unión de documentos), sin roles e inactivo (no operan).
+- En navegador: el administrador asignó evaluador + aprobador a un usuario; ese usuario vio el menú y el dashboard combinados, evaluó y aprobó una solicitud, y la decisión quedó marcada. El administrador no pudo quitarse su propio rol.
+- Pantallas principales de cada rol: las permitidas cargan y las no permitidas redirigen a "sin permiso".
+- `tsc`, `lint` y `next build` limpios.
+
+### Despliegue a producción
+- La migración elimina `profiles.rol` y `current_role()`: el código anterior falla sin esa columna, así que la app nueva y las migraciones deben desplegarse juntas, con un respaldo previo de la base.
+- Migraciones pendientes en producción a la fecha: `20260817000001` a `20260817000003` (revisión de Sprints 1–3) y `20260818000001`–`20260818000002` (roles múltiples).
+- Después de desplegar, el administrador debe revisar los roles de cada funcionario y sumar los que correspondan. La migración solo conserva el rol que cada uno tenía.
 
 ---
 
