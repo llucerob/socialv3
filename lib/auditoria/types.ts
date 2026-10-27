@@ -1,7 +1,8 @@
 import type { RolUsuario } from '@/lib/auth/types'
 
 // Mantener en sincronía con los literales de entidad/acción devueltos por
-// la función SQL listar_eventos_auditoria() (20260805000001_auditoria_fn.sql).
+// la función SQL listar_eventos_auditoria() (última versión:
+// 20260819000001_auditoria_informes_usuarios_incidentes.sql).
 export const ENTIDADES_AUDITORIA = [
   'grupo_familiar',
   'persona',
@@ -11,6 +12,9 @@ export const ENTIDADES_AUDITORIA = [
   'entrega',
   'producto',
   'hito',
+  'informe_social',
+  'usuario',
+  'incidente',
 ] as const
 
 export type EntidadAuditoria = (typeof ENTIDADES_AUDITORIA)[number]
@@ -29,6 +33,7 @@ export const ACCIONES_AUDITORIA = [
   'salida',
   'acceso_denegado',
   'eliminacion',
+  'cambio_roles',
 ] as const
 
 export type AccionAuditoria = (typeof ACCIONES_AUDITORIA)[number]
@@ -42,6 +47,9 @@ export const ENTIDAD_AUDITORIA_LABELS: Record<EntidadAuditoria, string> = {
   entrega: 'Entrega',
   producto: 'Producto',
   hito: 'Hito',
+  informe_social: 'Informe social',
+  usuario: 'Usuario',
+  incidente: 'Incidente de seguridad',
 }
 
 export const ACCION_AUDITORIA_LABELS: Record<AccionAuditoria, string> = {
@@ -58,6 +66,7 @@ export const ACCION_AUDITORIA_LABELS: Record<AccionAuditoria, string> = {
   salida: 'Salida de stock',
   acceso_denegado: 'Acceso denegado',
   eliminacion: 'Eliminación',
+  cambio_roles: 'Cambio de roles',
 }
 
 export type EventoAuditoria = {
