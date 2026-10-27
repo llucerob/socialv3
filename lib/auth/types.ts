@@ -32,3 +32,7 @@ export const ROL_LABELS: Record<RolUsuario, string> = {
   finanzas: 'Finanzas',
   auditor_consulta: 'Auditor / consulta',
 }
+
+// MR-02/MR-03: largo mínimo de contraseña, tanto al crear un usuario como al
+// cambiar la propia (Supabase local exige 6; la app pide algo más).
+export const LARGO_MINIMO_CONTRASENA = 8

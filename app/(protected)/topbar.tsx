@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { RolUsuario } from '@/lib/auth/types'
 import { etiquetaRoles } from '@/lib/auth/roles'
 import { iniciales } from '@/components/ui/texto'
@@ -37,12 +38,21 @@ export function Topbar({ nombre, roles }: { nombre: string; roles: RolUsuario[] 
             <path d="M10 18a2 2 0 0 0 4 0" />
           </svg>
         </button>
-        <div
-          className="flex size-8 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-800"
-          aria-hidden="true"
+        {/* MR-03: el avatar lleva a "Mi cuenta" (cambio de contraseña). */}
+        <Link
+          href="/mi-cuenta"
+          title="Mi cuenta"
+          className="flex items-center gap-2 rounded-full text-sm font-medium text-text-primary hover:text-brand-800"
         >
-          {iniciales(nombre)}
-        </div>
+          <span
+            className="flex size-8 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-800"
+            aria-hidden="true"
+          >
+            {iniciales(nombre)}
+          </span>
+          <span className="hidden sm:inline">Mi cuenta</span>
+          <span className="sr-only sm:hidden">Mi cuenta</span>
+        </Link>
         <LogoutButton />
       </div>
     </header>

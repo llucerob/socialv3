@@ -584,7 +584,7 @@ Al terminar este backlog MVP, el sistema permitirá, además de todo lo ya cubie
 
 > Ajustes pedidos en la revisión con el cliente. Cada mejora se apoya en una historia ya implementada; no cambia reglas de negocio, permisos ni el modelo de datos salvo que se indique.
 
-### MR-01 — Mapa más grande al crear/editar un grupo familiar
+### MR-01 ✅ — Mapa más grande al crear/editar un grupo familiar
 **Relacionada con:** US-03.01, US-03.06.
 **Pedido:** al crear un nuevo grupo familiar el mapa es muy pequeño; el formulario debe redistribuirse para que el mapa abarque más espacio en la pantalla.
 **Criterios de aceptación:**
@@ -592,3 +592,21 @@ Al terminar este backlog MVP, el sistema permitirá, además de todo lo ya cubie
 - En móvil los campos se apilan en una columna y el mapa mantiene una altura cómoda para marcar el punto.
 - El botón de guardar queda al final del formulario en ambos tamaños.
 - Los campos, validaciones y la sincronización mapa ↔ latitud/longitud no cambian. Aplica igual en "Nuevo grupo familiar" y "Editar grupo familiar" (mismo formulario).
+
+### MR-02 ✅ — El administrador crea usuarios desde la plataforma
+**Relacionada con:** US-01.02, US-19.01.
+**Pedido:** el rol administrador debe poder crear usuarios desde la plataforma (hoy solo se crean desde Supabase Studio o la Admin API).
+**Criterios de aceptación:**
+- Solo el administrador ve y usa "Nuevo usuario" en `/admin/usuarios`; la acción de servidor también lo exige.
+- El formulario pide nombre, email, contraseña inicial (mínimo 8 caracteres, con confirmación) y los roles, con las mismas casillas y descripciones que la ficha del usuario.
+- La cuenta queda activa y con el email confirmado, lista para iniciar sesión. Un email ya registrado muestra un error claro y no crea nada.
+- La asignación de roles queda en el historial del usuario (`profiles_historial`) a nombre del administrador que lo creó, igual que un cambio de roles.
+- La clave de servicio de Supabase (`SUPABASE_SERVICE_ROLE_KEY`) se usa solo en el servidor y solo para crear la cuenta; nunca llega al navegador.
+
+### MR-03 ✅ — Cada usuario cambia su propia contraseña
+**Relacionada con:** US-01.01.
+**Pedido:** cada usuario debe poder cambiar su clave personal.
+**Criterios de aceptación:**
+- Cualquier usuario con sesión, sea cual sea su rol, llega a "Mi cuenta" desde la barra superior.
+- Para cambiarla pide la contraseña actual, la nueva (mínimo 8 caracteres, distinta de la actual) y su confirmación. Si la actual es incorrecta no cambia nada.
+- Solo cambia la contraseña de quien tiene la sesión; no hay forma de cambiar la de otro usuario desde esta pantalla.

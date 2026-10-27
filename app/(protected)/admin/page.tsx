@@ -5,7 +5,7 @@ const SECCIONES = [
   {
     href: '/admin/usuarios',
     titulo: 'Usuarios',
-    descripcion: 'Ver usuarios del sistema, cambiar su rol o activar/desactivar su cuenta.',
+    descripcion: 'Crear usuarios, cambiar sus roles o activar/desactivar su cuenta.',
   },
   {
     href: '/admin/sectores',

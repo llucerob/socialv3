@@ -4,6 +4,7 @@ import { listarUsuarios } from '@/lib/usuarios/dal'
 import { ROL_LABELS } from '@/lib/auth/types'
 import { ROLES_ORDENADOS } from '@/lib/auth/roles'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
+import { ButtonLink } from '@/components/ui/Button'
 
 // US-19.01: "se listan usuarios".
 export default async function UsuariosPage() {
@@ -12,7 +13,11 @@ export default async function UsuariosPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-text-primary">Usuarios</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-text-primary">Usuarios</h1>
+        {/* MR-02 */}
+        <ButtonLink href="/admin/usuarios/nuevo">Nuevo usuario</ButtonLink>
+      </div>
 
       {usuarios.length === 0 ? (
         <p className="text-sm text-text-muted">Sin usuarios registrados.</p>
