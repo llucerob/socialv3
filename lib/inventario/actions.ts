@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/dal'
+import { mensajeErrorBeneficio } from '@/lib/beneficios/types'
 
 // US-11.01 criterio: "solo usuarios autorizados pueden modificar inventario".
 // Como bodega/administrador (US-11.01/US-11.02/US-11.03), mismo criterio en
@@ -125,8 +126,12 @@ export type SalidaFormState = { error?: string; valores: ValoresSalidaFormulario
 // desde ahí una vez que llega nuevo stock.
 const ESTADOS_VALIDOS_SALIDA = ['aprobada', 'aprobada_excepcion', 'pendiente_stock']
 
+// MR-08: en un beneficio periódico la salida es de un período (cada caja
+// del mes se descuenta por separado). El trigger de movimientos_stock valida
+// que el período pertenezca al beneficio y ya haya comenzado.
 export async function registrarSalidaStock(
   solicitudId: string,
+  periodo: string | null,
   _prevState: SalidaFormState,
   formData: FormData
 ): Promise<SalidaFormState> {
@@ -167,6 +172,7 @@ export async function registrarSalidaStock(
     tipo: 'salida',
     cantidad,
     solicitud_id: solicitudId,
+    periodo,
     observacion,
   })
 
@@ -182,7 +188,10 @@ export async function registrarSalidaStock(
         valores,
       }
     }
-    return { error: 'No se pudo registrar la salida de stock.', valores }
+    return {
+      error: mensajeErrorBeneficio(errorInsert.message) ?? 'No se pudo registrar la salida de stock.',
+      valores,
+    }
   }
 
   // Si la solicitud estaba pendiente de stock y esta salida sí se pudo
@@ -199,4 +208,5 @@ export async function registrarSalidaStock(
   }
 
   revalidatePath(`/solicitudes/${solicitudId}`)
+  revalidatePath('/entregas')
 }

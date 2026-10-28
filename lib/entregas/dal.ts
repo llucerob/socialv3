@@ -70,8 +70,18 @@ function mapearConContexto(fila: FilaConContexto): Omit<EntregaConContexto, 'res
   }
 }
 
+// MR-08: las entregas de un beneficio cuyo plazo venció se cancelan solas.
+// Lo hace a diario pg_cron; se llama también aquí, antes de listar, para no
+// mostrar como pendiente algo que ya no se puede entregar (es idempotente).
+export async function cancelarEntregasVencidas(): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('cancelar_entregas_vencidas')
+  if (error) throw new Error(`Error al cancelar las entregas vencidas: ${error.message}`)
+}
+
 // US-12.01: gestión general (bodega/administrador) — todas las entregas.
 export async function listarEntregas(): Promise<EntregaConContexto[]> {
+  await cancelarEntregasVencidas()
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('entregas')
@@ -93,6 +103,7 @@ export async function listarMisEntregas(
   usuarioId: string,
   verEntregasDeTodos: boolean
 ): Promise<EntregaConContexto[]> {
+  await cancelarEntregasVencidas()
   const supabase = await createClient()
   let consulta = supabase
     .from('entregas')
@@ -100,6 +111,9 @@ export async function listarMisEntregas(
     // MR-06: una entrega en local se registra ya realizada en el
     // Departamento Social; no es parte del trabajo de terreno.
     .eq('modalidad', 'domicilio')
+    // MR-08: una entrega cancelada (beneficio suspendido o plazo vencido)
+    // ya no es trabajo de terreno.
+    .neq('estado', 'cancelada')
     .order('fecha_programada', { ascending: true, nullsFirst: false })
   if (!verEntregasDeTodos) {
     consulta = consulta.eq('responsable_id', usuarioId)
@@ -128,13 +142,18 @@ export async function obtenerEntrega(id: string): Promise<EntregaConContexto | n
   return conResponsable
 }
 
-export async function obtenerEntregaDeSolicitud(solicitudId: string): Promise<Entrega | null> {
+// MR-08: en un beneficio periódico, la entrega de un período; con periodo
+// null, la de una ayuda única.
+export async function obtenerEntregaDeSolicitud(
+  solicitudId: string,
+  periodo: string | null = null
+): Promise<Entrega | null> {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const consulta = supabase
     .from('entregas')
     .select('*, motivos_entrega_fallida(nombre)')
     .eq('solicitud_id', solicitudId)
-    .maybeSingle()
+  const { data, error } = await (periodo ? consulta.eq('periodo', periodo) : consulta.is('periodo', null)).maybeSingle()
 
   if (error) throw error
   if (!data) return null
@@ -200,11 +219,13 @@ export async function listarEntregasRealizadasDeHogar(
 // obtenerEntregaDeSolicitud (RLS directa), que además trae lo necesario
 // para las acciones de gestión.
 export async function obtenerEntregaLecturaDeSolicitud(
-  solicitudId: string
+  solicitudId: string,
+  periodo: string | null = null
 ): Promise<EntregaLecturaSolicitud | null> {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('obtener_entrega_lectura_de_solicitud', {
     p_solicitud_id: solicitudId,
+    p_periodo: periodo,
   })
 
   if (error) throw new Error(`Error al consultar la entrega de la solicitud: ${error.message}`)

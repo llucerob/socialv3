@@ -1,3 +1,6 @@
+import type { PeriodicidadBeneficio } from '@/lib/beneficios/types'
+import type { ModalidadEntrega } from '@/lib/entregas/types'
+
 export type TipoDecisionSolicitud = 'aprobada' | 'rechazada'
 
 export const DECISION_LABELS: Record<TipoDecisionSolicitud, string> = {
@@ -19,6 +22,10 @@ export type DecisionSolicitud = {
   // tomó la decisión (posible con roles múltiples; se marca, no se
   // bloquea). Lo calcula un trigger al insertar.
   decidida_por_quien_evaluo: boolean
+  // MR-08: lo aprobado para un beneficio periódico (null en una ayuda única).
+  // La modalidad vigente está en `beneficios`, que puede cambiar después.
+  periodicidad: PeriodicidadBeneficio | null
+  modalidad_entrega: ModalidadEntrega | null
   aprobador_id: string
   created_at: string
 }

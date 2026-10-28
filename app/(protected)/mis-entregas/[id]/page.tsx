@@ -8,6 +8,7 @@ import { obtenerTipoAyuda } from '@/lib/ayudas/dal'
 import { tieneSalidaStock } from '@/lib/inventario/dal'
 import { listarMotivosEntregaFallidaActivos } from '@/lib/motivos-entrega/dal'
 import { enlaceMapa } from '@/lib/rutas/mapas'
+import { etiquetaPeriodo } from '@/lib/beneficios/types'
 import { EntregaRealizadaForm } from '../entrega-realizada-form'
 import { EntregaFallidaForm } from '../entrega-fallida-form'
 import { Card } from '@/components/ui/Card'
@@ -43,7 +44,7 @@ export default async function MiEntregaPage({
   const motivosActivos = entrega.estado === 'pendiente' ? await listarMotivosEntregaFallidaActivos() : []
   // MR-07: sin salida de stock registrada no se puede marcar realizada
   // (trigger entregas_exigir_salida_stock); fallida sí.
-  const salidaRegistrada = entrega.estado === 'pendiente' ? await tieneSalidaStock(entrega.solicitud_id) : true
+  const salidaRegistrada = entrega.estado === 'pendiente' ? await tieneSalidaStock(entrega.solicitud_id, entrega.periodo) : true
 
   const registrarRealizadaConId = registrarEntregaRealizada.bind(null, id)
   const registrarFallidaConId = registrarEntregaFallida.bind(null, id)
@@ -57,6 +58,12 @@ export default async function MiEntregaPage({
           {entrega.grupo_familiar_sector && ` · ${entrega.grupo_familiar_sector}`}
         </p>
         {entrega.persona_nombre && <p className="text-sm text-text-muted">{entrega.persona_nombre}</p>}
+        {/* MR-08 */}
+        {entrega.periodo && (
+          <p className="text-sm text-text-muted">
+            Beneficio periódico · entrega de <span className="font-medium">{etiquetaPeriodo(entrega.periodo)}</span>
+          </p>
+        )}
         <p className="mt-2 flex items-center gap-2">
           <EstadoBadge estado={entrega.estado} />
         </p>

@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { aprobarExcepcionRsh, type ExcepcionRshFormState } from '@/lib/decisiones/actions'
 import { Button } from '@/components/ui/Button'
 import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
+import { CamposBeneficio, type DatosBeneficioAprobacion } from './campos-beneficio'
 
 // US-05.05: "autorizar excepcionalmente... sin ocultar que se trata de un
 // caso excepcional" — "se exige motivo escrito" y "autoridad o unidad que
@@ -13,7 +14,16 @@ import { BadgeExcepcion, CardExcepcion } from '@/components/ui/ExcepcionRSH'
 // ExcepcionDialisisForm (solo reembolso), una excepción RSH puede aplicar a
 // cualquier tipo de ayuda, así que muestra monto o cantidad según
 // corresponda, igual que AprobarForm.
-export function ExcepcionRshForm({ solicitudId, esReembolso }: { solicitudId: string; esReembolso: boolean }) {
+export function ExcepcionRshForm({
+  solicitudId,
+  esReembolso,
+  beneficio,
+}: {
+  solicitudId: string
+  esReembolso: boolean
+  // MR-08: solo para un beneficio periódico.
+  beneficio?: DatosBeneficioAprobacion
+}) {
   const accion = aprobarExcepcionRsh.bind(null, solicitudId)
   const [state, formAction, pending] = useActionState<ExcepcionRshFormState, FormData>(accion, undefined)
   const valores = state?.valores
@@ -53,6 +63,15 @@ export function ExcepcionRshForm({ solicitudId, esReembolso }: { solicitudId: st
               className="w-full rounded-lg border border-exception-border bg-transparent px-3 py-2 text-sm"
             />
           </div>
+        )}
+
+        {beneficio && (
+          <CamposBeneficio
+            beneficio={beneficio}
+            valores={valores}
+            sufijoId="excepcion_rsh"
+            claseCampo="w-full rounded-lg border border-exception-border bg-transparent px-3 py-2 text-sm"
+          />
         )}
 
         <div className="space-y-1">

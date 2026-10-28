@@ -1,3 +1,5 @@
+import type { PeriodicidadBeneficio } from '@/lib/beneficios/types'
+
 export type EstadoTipoAyuda = 'activo' | 'inactivo'
 
 export type TipoAyuda = {
@@ -17,6 +19,10 @@ export type TipoAyuda = {
   tiene_tope_monetario: boolean
   tope_monetario: number | null
   periodicidad: string | null
+  // MR-08: la aprobación otorga un beneficio que se entrega con esta
+  // periodicidad (sugerida; el aprobador la confirma) hasta diciembre. Null =
+  // ayuda única. Solo con requiere_entrega.
+  periodicidad_beneficio: PeriodicidadBeneficio | null
   creado_por: string | null
   actualizado_por: string | null
   created_at: string

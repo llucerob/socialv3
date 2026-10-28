@@ -70,7 +70,20 @@ import { SalidaStockForm } from '../salida-stock-form'
 import { EntregaAsignacionForm } from '../entrega-asignacion-form'
 import { EntregaLocalForm } from '../entrega-local-form'
 import { PasosEntrega, type PasoEntrega } from '../pasos-entrega'
+import { BeneficioPeriodico } from '../beneficio-periodico'
 import { tieneSalidaStock } from '@/lib/inventario/dal'
+import {
+  obtenerBeneficioDeSolicitud,
+  listarPeriodosDeBeneficio,
+  obtenerHistorialBeneficio,
+} from '@/lib/beneficios/dal'
+import { cambiarModalidadBeneficio, suspenderBeneficio } from '@/lib/beneficios/actions'
+import {
+  PERIODICIDAD_BENEFICIO_LABELS,
+  etiquetaPeriodo,
+  periodoDesdeParametro,
+} from '@/lib/beneficios/types'
+import { fechaHoyChile } from '@/lib/fechas'
 import { Card } from '@/components/ui/Card'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
@@ -110,6 +123,16 @@ const ROLES_EXCEPCION_DIALISIS: RolUsuario[] = ['administrador']
 // US-05.05: "solo roles autorizados (aprobador/administrador) pueden
 // registrar la excepción" — a diferencia de la excepción de diálisis.
 const ROLES_EXCEPCION_RSH: RolUsuario[] = ['administrador', 'aprobador']
+// MR-08: quien evalúa o decide el beneficio cambia su modalidad o lo suspende.
+const ROLES_GESTION_BENEFICIO: RolUsuario[] = ['administrador', 'evaluador_social', 'aprobador']
+// beneficios_historial: mismo público que su RLS.
+const ROLES_HISTORIAL_BENEFICIO: RolUsuario[] = [
+  'administrador',
+  'evaluador_social',
+  'aprobador',
+  'bodega_logistica',
+  'auditor_consulta',
+]
 // US-20.02: "terreno no ve historial completo del hogar" — terreno_repartidor
 // no aparece en ninguna de las listas de arriba (no gestiona, evalúa,
 // aprueba, ni maneja stock/pago de una solicitud) y no tiene enlace de nav a
@@ -167,7 +190,7 @@ function PasarAEntregaLocal({ action, requiereEvidencia }: { action: EntregaLoca
       </summary>
       <p className="mt-2 mb-4 text-sm text-text-muted">
         La entrega a domicilio se reemplaza por una entrega en local realizada ahora; el cambio queda en el
-        historial de la entrega.
+        historial de la entrega. En un beneficio, solo cambia este período.
       </p>
       <EntregaLocalForm
         action={action}
@@ -183,10 +206,10 @@ export default async function DetalleSolicitudPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tipo_documento?: string }>
+  searchParams: Promise<{ tipo_documento?: string; periodo?: string }>
 }) {
   const { id } = await params
-  const { tipo_documento: tipoDocumentoParam } = await searchParams
+  const { tipo_documento: tipoDocumentoParam, periodo: periodoParam } = await searchParams
   const tipoFiltro = TIPOS_DOCUMENTO.includes(tipoDocumentoParam as TipoDocumento)
     ? (tipoDocumentoParam as TipoDocumento)
     : undefined
@@ -309,33 +332,65 @@ export default async function DetalleSolicitudPage({
   const documentos = await listarDocumentosDeSolicitud(id)
   const subirDocumentoConId = subirDocumentoSolicitud.bind(null, id)
 
-  const productos = puedeRegistrarSalidaStock ? await listarProductos() : []
+  // MR-08: un beneficio periódico se entrega por períodos. La sección
+  // "Entrega" (y la salida de stock) trabaja con un período a la vez: el de
+  // ?periodo= o, si no viene, el primero ya iniciado que falta entregar.
+  const requiereEntrega = tipoAyuda?.requiere_entrega ?? false
+  const beneficio = requiereEntrega ? await obtenerBeneficioDeSolicitud(id) : null
+  const periodosBeneficio = beneficio ? await listarPeriodosDeBeneficio(id) : []
+  const mesActual = `${fechaHoyChile().slice(0, 7)}-01`
+  const periodoPedido = periodoDesdeParametro(periodoParam)
+  const periodoBeneficio = beneficio
+    ? (periodosBeneficio.find((p) => p.periodo === periodoPedido) ??
+      periodosBeneficio.find((p) => p.estado_periodo === 'abierto') ??
+      periodosBeneficio.find((p) => p.estado_periodo === 'por_venir') ??
+      periodosBeneficio.at(-1) ??
+      null)
+    : null
+  const periodo: string | null = periodoBeneficio?.periodo ?? null
+  // Se puede preparar y entregar el período: su plazo está abierto (calendario
+  // de la base) y el beneficio sigue vigente. Para una ayuda única, siempre.
+  const periodoOperable =
+    !beneficio || (beneficio.estado === 'vigente' && periodoBeneficio?.estado_periodo === 'abierto')
+  const historialBeneficio =
+    beneficio && tieneRol(profile, ROLES_HISTORIAL_BENEFICIO) ? await obtenerHistorialBeneficio(beneficio.beneficio_id) : []
+  const puedeGestionarBeneficio = Boolean(beneficio?.estado === 'vigente') && tieneRol(profile, ROLES_GESTION_BENEFICIO)
+
+  const puedeRegistrarSalidaStockPeriodo = puedeRegistrarSalidaStock && periodoOperable
+  const productos = puedeRegistrarSalidaStockPeriodo ? await listarProductos() : []
   const movimientosStock = puedeVerStock ? await listarMovimientosDeSolicitud(id) : []
-  const registrarSalidaStockConId = registrarSalidaStock.bind(null, id)
+  const registrarSalidaStockConId = registrarSalidaStock.bind(null, id, periodo)
 
   // US-12.01: solo tiene sentido ofrecer "crear entrega" para ayudas que de
   // verdad se entregan físicamente (tipos_ayuda.requiere_entrega, US-06.02) —
   // p. ej. un reembolso nunca genera una entrega.
-  const entrega = puedeGestionarEntregas ? await obtenerEntregaDeSolicitud(id) : null
-  const puedeCrearEntrega =
+  const entrega = puedeGestionarEntregas ? await obtenerEntregaDeSolicitud(id, periodo) : null
+  // MR-08: un beneficio en local no se programa a domicilio (para eso se
+  // cambia su modalidad); el retiro en local sí se ofrece en uno a domicilio.
+  const puedeProgramarEntrega =
     puedeGestionarEntregas &&
     !entrega &&
     Boolean(tipoAyuda?.requiere_entrega) &&
-    ESTADOS_CON_ENTREGA.includes(solicitud.estado)
+    ESTADOS_CON_ENTREGA.includes(solicitud.estado) &&
+    periodoOperable
+  const puedeCrearEntrega = puedeProgramarEntrega && beneficio?.modalidad !== 'local'
+  // Caso fortuito: un beneficio en local que este mes hay que llevar al
+  // domicilio. No cambia la modalidad del beneficio.
+  const programarDomicilioFortuito = puedeProgramarEntrega && beneficio?.modalidad === 'local'
   const funcionariosTerreno =
-    puedeGestionarEntregas && (puedeCrearEntrega || entrega?.estado === 'pendiente' || entrega?.estado === 'fallida')
+    puedeGestionarEntregas && (puedeCrearEntrega || programarDomicilioFortuito || entrega?.estado === 'pendiente' || entrega?.estado === 'fallida')
       ? await listarFuncionariosTerreno()
       : []
   const historialEntrega =
     puedeGestionarEntregas && entrega ? await obtenerHistorialEntrega(entrega.id) : []
-  const crearEntregaConId = crearEntrega.bind(null, id)
+  const crearEntregaConId = crearEntrega.bind(null, id, periodo)
 
   // EPIC 12: vista de solo lectura para el resto de roles que pueden ver
   // esta solicitud pero no gestionan entregas (evaluador_social, aprobador,
   // finanzas, auditor_consulta) — antes no veían nada de esta sección.
   const entregaLectura =
     !puedeGestionarEntregas && (tipoAyuda?.requiere_entrega ?? false)
-      ? await obtenerEntregaLecturaDeSolicitud(id)
+      ? await obtenerEntregaLecturaDeSolicitud(id, periodo)
       : null
   const asignarResponsableConId = entrega ? asignarResponsable.bind(null, entrega.id) : undefined
   // MR-06: entrega en local, para gestor social y bodega. Se ofrece mientras
@@ -343,13 +398,14 @@ export default async function DetalleSolicitudPage({
   const estadoEntrega = entrega?.estado ?? entregaLectura?.estado ?? null
   // MR-07: sin salida de stock registrada no se entrega (también lo exige
   // el trigger entregas_exigir_salida_stock).
-  const requiereEntrega = tipoAyuda?.requiere_entrega ?? false
-  const salidaRegistrada = requiereEntrega ? await tieneSalidaStock(id) : false
+  const salidaRegistrada = requiereEntrega ? await tieneSalidaStock(id, periodo) : false
   const ofrecerEntregaLocal =
     tieneRol(profile, ROLES_ENTREGA_LOCAL) &&
     Boolean(tipoAyuda?.requiere_entrega && tipoAyuda.permite_entrega_local) &&
     ESTADOS_CON_ENTREGA.includes(solicitud.estado) &&
     estadoEntrega !== 'realizada' &&
+    estadoEntrega !== 'cancelada' &&
+    periodoOperable &&
     salidaRegistrada
   const programarDomicilio = puedeCrearEntrega && salidaRegistrada
 
@@ -357,7 +413,11 @@ export default async function DetalleSolicitudPage({
   const datosEntrega = entrega ?? entregaLectura
   const entregaId = entrega?.id ?? entregaLectura?.entrega_id ?? null
   const aprobada = ESTADOS_APROBADOS.includes(solicitud.estado)
-  const entregada = estadoEntrega === 'realizada' || solicitud.estado === 'entregada_pagada'
+  // MR-08: en un beneficio, "entregada" es el período; la solicitud se cierra
+  // como entregada con el último.
+  const entregada = estadoEntrega === 'realizada' || (!beneficio && solicitud.estado === 'entregada_pagada')
+  const etiquetaPeriodoActual = periodo ? etiquetaPeriodo(periodo) : null
+  const proximoPeriodo = beneficio?.proximo_periodo ?? null
   const pasosEntrega: PasoEntrega[] = [
     {
       titulo: 'Aprobación',
@@ -387,18 +447,39 @@ export default async function DetalleSolicitudPage({
         : undefined,
       estado: entregada ? 'hecho' : aprobada && salidaRegistrada ? 'actual' : 'pendiente',
     },
-    {
-      titulo: 'Entregada',
-      responsable: 'La solicitud se cierra como entregada',
-      estado: entregada ? 'hecho' : 'pendiente',
-    },
+    beneficio
+      ? {
+          titulo: 'Período entregado',
+          responsable: 'Con el último período, la solicitud queda entregada',
+          estado: entregada ? 'hecho' : 'pendiente',
+        }
+      : {
+          titulo: 'Entregada',
+          responsable: 'La solicitud se cierra como entregada',
+          estado: entregada ? 'hecho' : 'pendiente',
+        },
   ]
   const esAdministrador = tieneRol(profile, ['administrador'])
   let proximoPaso: ReactNode
-  if (entregada) {
+  if (beneficio && entregada) {
+    const detalle = datosEntrega?.fecha_hora_entrega
+      ? ` (${MODALIDAD_ENTREGA_LABELS[datosEntrega.modalidad].toLowerCase()}, el ${new Date(datosEntrega.fecha_hora_entrega).toLocaleString('es-CL')})`
+      : ''
+    proximoPaso = proximoPeriodo
+      ? `${etiquetaPeriodoActual} ya está entregado${detalle}. La próxima entrega es la de ${etiquetaPeriodo(proximoPeriodo)}.`
+      : `ninguno. ${etiquetaPeriodoActual} ya está entregado${detalle} y no quedan períodos pendientes.`
+  } else if (entregada) {
     proximoPaso = datosEntrega?.fecha_hora_entrega
       ? `ninguno. Ayuda entregada (${MODALIDAD_ENTREGA_LABELS[datosEntrega.modalidad].toLowerCase()}) el ${new Date(datosEntrega.fecha_hora_entrega).toLocaleString('es-CL')}`
       : 'ninguno. La ayuda ya fue entregada.'
+  } else if (beneficio?.estado === 'suspendido' || estadoEntrega === 'cancelada') {
+    proximoPaso = 'ninguno. El beneficio está suspendido y sus períodos pendientes quedaron cancelados.'
+  } else if (beneficio?.estado === 'vencido') {
+    proximoPaso = `ninguno. El beneficio venció el ${formatearFecha(beneficio.vigente_hasta)}; el hogar necesita una nueva solicitud.`
+  } else if (periodoBeneficio?.estado_periodo === 'no_entregado') {
+    proximoPaso = `ninguno para ${etiquetaPeriodoActual}: su plazo venció sin retiro y se pierde.${proximoPeriodo ? ` La próxima entrega es la de ${etiquetaPeriodo(proximoPeriodo)}.` : ''}`
+  } else if (periodoBeneficio?.estado_periodo === 'por_venir') {
+    proximoPaso = `${etiquetaPeriodoActual} todavía no comienza (fecha estimada). Se prepara y entrega a partir de ese mes.`
   } else if (!aprobada) {
     proximoPaso = 'la solicitud debe aprobarse antes de preparar la entrega.'
   } else if (solicitud.estado === 'pendiente_stock') {
@@ -407,6 +488,10 @@ export default async function DetalleSolicitudPage({
     proximoPaso = puedeVerStock
       ? 'registra la salida de stock en la sección «Stock», más arriba. Sin ella no se puede entregar.'
       : 'bodega debe registrar la salida de stock de esta solicitud. Sin ella no se puede entregar.'
+  } else if (!datosEntrega && beneficio?.modalidad === 'local') {
+    proximoPaso = ofrecerEntregaLocal
+      ? 'beneficio en local: cuando la persona venga a retirar, usa «Marcar como entregada».'
+      : 'beneficio en local: el gestor social o bodega registran la entrega cuando la persona venga a retirar.'
   } else if (!datosEntrega) {
     proximoPaso = ofrecerEntregaLocal
       ? programarDomicilio
@@ -439,11 +524,23 @@ export default async function DetalleSolicitudPage({
       ? 'la entrega falló. Bodega debe reprogramarla, o, si la persona viene a retirarla, márcala como entregada en local.'
       : 'la entrega falló. Bodega debe reprogramarla.'
   }
-  const registrarEntregaLocalConId = registrarEntregaLocal.bind(null, id)
+  const registrarEntregaLocalConId = registrarEntregaLocal.bind(null, id, periodo)
   const requiereEvidencia = tipoAyuda?.requiere_evidencia ?? false
   const reprogramarEntregaConId = entrega ? reprogramarEntrega.bind(null, entrega.id) : undefined
 
   const volverAEvaluacionConId = volverAEvaluacion.bind(null, id)
+
+  // MR-08: la periodicidad que propuso el gestor social (la evaluación más
+  // reciente que la trae) o, si no hay, la del catálogo.
+  const periodicidadPropuesta = [...evaluaciones]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .find((evaluacion) => evaluacion.periodicidad_propuesta)?.periodicidad_propuesta
+  const datosBeneficioAprobacion = tipoAyuda?.periodicidad_beneficio
+    ? {
+        periodicidadSugerida: periodicidadPropuesta ?? tipoAyuda.periodicidad_beneficio,
+        permiteEntregaLocal: tipoAyuda.requiere_entrega && tipoAyuda.permite_entrega_local,
+      }
+    : undefined
 
   return (
     <div className="space-y-8">
@@ -544,14 +641,41 @@ export default async function DetalleSolicitudPage({
         </section>
       )}
 
+      {beneficio && periodo && (
+        <BeneficioPeriodico
+          beneficio={beneficio}
+          periodos={periodosBeneficio}
+          periodoSeleccionado={periodo}
+          mesActual={mesActual}
+          solicitudId={id}
+          historial={historialBeneficio}
+          accionCambiarModalidad={
+            puedeGestionarBeneficio
+              ? cambiarModalidadBeneficio.bind(null, id, solicitud.grupo_familiar_id)
+              : undefined
+          }
+          accionSuspender={
+            puedeGestionarBeneficio ? suspenderBeneficio.bind(null, id, solicitud.grupo_familiar_id) : undefined
+          }
+        />
+      )}
+
       {puedeVerStock && (
         <section className="space-y-3">
           <h2 className="font-medium text-text-primary">Stock</h2>
-          {puedeRegistrarSalidaStock ? (
+          {beneficio && etiquetaPeriodoActual && (
+            <p className="text-sm text-text-primary">
+              Salida del período <span className="font-medium">{etiquetaPeriodoActual}</span>
+              {salidaRegistrada ? ': ya registrada.' : '.'} Cada período se descuenta por separado.
+            </p>
+          )}
+          {puedeRegistrarSalidaStockPeriodo ? (
             <SalidaStockForm action={registrarSalidaStockConId} productos={productos} />
           ) : (
             <p className="text-sm text-text-muted">
-              La solicitud debe estar aprobada para registrar una salida de stock.
+              {puedeRegistrarSalidaStock
+                ? 'Este período no se puede preparar: todavía no comienza o el beneficio no está vigente.'
+                : 'La solicitud debe estar aprobada para registrar una salida de stock.'}
             </p>
           )}
           {movimientosStock.length > 0 && (
@@ -560,6 +684,7 @@ export default async function DetalleSolicitudPage({
                 <li key={movimiento.id} className="flex items-center justify-between px-4 py-2">
                   <span className="text-text-primary">
                     {movimiento.producto_nombre} · {movimiento.cantidad} {movimiento.producto_unidad_medida}
+                    {movimiento.periodo ? ` · ${etiquetaPeriodo(movimiento.periodo)}` : ''}
                     {movimiento.observacion ? ` · ${movimiento.observacion}` : ''}
                   </span>
                   <span className="text-xs text-text-muted">
@@ -574,8 +699,27 @@ export default async function DetalleSolicitudPage({
 
       {puedeGestionarEntregas && (tipoAyuda?.requiere_entrega ?? false) && (
         <section className="space-y-3">
-          <h2 className="font-medium text-text-primary">Entrega</h2>
+          <h2 className="font-medium text-text-primary">
+            Entrega{etiquetaPeriodoActual && <span className="capitalize"> — {etiquetaPeriodoActual}</span>}
+          </h2>
           <PasosEntrega pasos={pasosEntrega} proximoPaso={proximoPaso} />
+
+          {programarDomicilioFortuito && salidaRegistrada && (
+            <details className="rounded-xl border border-border bg-surface px-4 py-3">
+              <summary className="cursor-pointer text-sm font-medium text-brand-800">
+                Caso fortuito: llevar la entrega de este mes al domicilio
+              </summary>
+              <p className="mt-2 mb-4 text-sm text-text-muted">
+                El beneficio es en local. Usa esto solo si este mes la persona no puede venir; el beneficio sigue en
+                local para los meses siguientes.
+              </p>
+              <EntregaAsignacionForm
+                action={crearEntregaConId}
+                funcionarios={funcionariosTerreno}
+                submitLabel="Programar a domicilio (caso fortuito)"
+              />
+            </details>
+          )}
 
           {!entrega && (programarDomicilio || ofrecerEntregaLocal) && (
             <div className="grid gap-4 lg:grid-cols-2">
@@ -680,7 +824,9 @@ export default async function DetalleSolicitudPage({
 
       {!puedeGestionarEntregas && (tipoAyuda?.requiere_entrega ?? false) && (
         <section className="space-y-3">
-          <h2 className="font-medium text-text-primary">Entrega</h2>
+          <h2 className="font-medium text-text-primary">
+            Entrega{etiquetaPeriodoActual && <span className="capitalize"> — {etiquetaPeriodoActual}</span>}
+          </h2>
           <PasosEntrega pasos={pasosEntrega} proximoPaso={proximoPaso} />
 
           {!entregaLectura && ofrecerEntregaLocal && (
@@ -832,6 +978,11 @@ export default async function DetalleSolicitudPage({
                       </span>
                     </p>
                     <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">{evaluacion.fundamento}</p>
+                    {evaluacion.periodicidad_propuesta && (
+                      <p className="mt-1 text-sm text-text-muted">
+                        Periodicidad propuesta: {PERIODICIDAD_BENEFICIO_LABELS[evaluacion.periodicidad_propuesta]}
+                      </p>
+                    )}
                   </Card>
                 </li>
               ))}
@@ -840,7 +991,10 @@ export default async function DetalleSolicitudPage({
 
           {puedeEvaluar && solicitud.estado === 'en_evaluacion' && (
             <div className="mt-4">
-              <EvaluacionForm solicitudId={solicitud.id} />
+              <EvaluacionForm
+                solicitudId={solicitud.id}
+                periodicidadPorDefecto={tipoAyuda?.periodicidad_beneficio ?? null}
+              />
             </div>
           )}
         </section>
@@ -951,6 +1105,12 @@ export default async function DetalleSolicitudPage({
                 Cantidad/detalle aprobado: {decision.cantidad_aprobada}
               </p>
             )}
+            {decision.periodicidad && (
+              <p className="mt-1 text-sm text-text-primary">
+                Beneficio periódico: {PERIODICIDAD_BENEFICIO_LABELS[decision.periodicidad].toLowerCase()} hasta diciembre
+                {decision.modalidad_entrega && ` · ${MODALIDAD_ENTREGA_LABELS[decision.modalidad_entrega].toLowerCase()}`}
+              </p>
+            )}
             {decision.decidida_por_quien_evaluo && (
               <p className="mt-2 rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
                 Evaluada y decidida por la misma persona.
@@ -995,11 +1155,16 @@ export default async function DetalleSolicitudPage({
                 topeReembolsoGeneral={topeReembolsoGeneral}
                 topeDialisis={topeDialisis}
                 remanenteExcepcional={remanenteExcepcional}
+                beneficio={datosBeneficioAprobacion}
               />
               <RechazarForm solicitudId={solicitud.id} />
               {puedeAprobarExcepcionDialisis && <ExcepcionDialisisForm solicitudId={solicitud.id} />}
               {puedeAprobarExcepcionRsh && totalInformesSociales > 0 && (
-                <ExcepcionRshForm solicitudId={solicitud.id} esReembolso={esReembolso} />
+                <ExcepcionRshForm
+                  solicitudId={solicitud.id}
+                  esReembolso={esReembolso}
+                  beneficio={datosBeneficioAprobacion}
+                />
               )}
             </div>
           )}

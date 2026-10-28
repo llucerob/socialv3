@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/dal'
+import { PERIODICIDADES_BENEFICIO, type PeriodicidadBeneficio } from '@/lib/beneficios/types'
 
 // US-06.02: "modificación solo por administrador" — a diferencia de
 // grupos_familiares/personas, evaluador_social NO puede escribir aquí.
@@ -22,6 +23,7 @@ type ValoresTipoAyudaFormulario = {
   tiene_tope_monetario: boolean
   tope_monetario: number | null
   periodicidad: string | null
+  periodicidad_beneficio: PeriodicidadBeneficio | null
 }
 
 export type TipoAyudaFormState =
@@ -46,6 +48,11 @@ function leerCampos(formData: FormData): ValoresTipoAyudaFormulario {
     tiene_tope_monetario: tieneTope,
     tope_monetario: tope,
     periodicidad: formData.get('periodicidad')?.toString().trim() || null,
+    periodicidad_beneficio: PERIODICIDADES_BENEFICIO.includes(
+      formData.get('periodicidad_beneficio')?.toString() as PeriodicidadBeneficio
+    )
+      ? (formData.get('periodicidad_beneficio')?.toString() as PeriodicidadBeneficio)
+      : null,
   }
 }
 
@@ -60,6 +67,12 @@ function validarCampos(campos: ValoresTipoAyudaFormulario): string | null {
 
   if (campos.tope_monetario !== null && !Number.isNaN(campos.tope_monetario) && campos.tope_monetario < 0) {
     return 'El tope monetario no puede ser negativo.'
+  }
+
+  // MR-08: un beneficio periódico es de entregas físicas (también lo exige
+  // un CHECK en la base).
+  if (campos.periodicidad_beneficio && !campos.requiere_entrega) {
+    return 'Un beneficio periódico debe requerir entrega.'
   }
 
   return null
@@ -80,6 +93,7 @@ function datosParaGuardar(campos: ValoresTipoAyudaFormulario) {
     tiene_tope_monetario: campos.tiene_tope_monetario,
     tope_monetario: campos.tiene_tope_monetario ? campos.tope_monetario : null,
     periodicidad: campos.periodicidad,
+    periodicidad_beneficio: campos.periodicidad_beneficio,
   }
 }
 

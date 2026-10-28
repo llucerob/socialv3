@@ -1,3 +1,5 @@
+import type { PeriodicidadBeneficio } from '@/lib/beneficios/types'
+
 export type RecomendacionEvaluacion = 'aprobar' | 'rechazar'
 
 export const RECOMENDACION_LABELS: Record<RecomendacionEvaluacion, string> = {
@@ -10,6 +12,9 @@ export type EvaluacionSocial = {
   solicitud_id: string
   fundamento: string
   recomendacion: RecomendacionEvaluacion
+  // MR-08: periodicidad que propone el gestor social para un beneficio
+  // periódico; el aprobador la confirma o la cambia.
+  periodicidad_propuesta: PeriodicidadBeneficio | null
   evaluador_id: string
   created_at: string
 }

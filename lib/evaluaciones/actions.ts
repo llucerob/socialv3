@@ -4,12 +4,14 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth/dal'
 import type { RecomendacionEvaluacion } from './types'
+import { PERIODICIDADES_BENEFICIO, type PeriodicidadBeneficio } from '@/lib/beneficios/types'
 
 const ROLES_EVALUACION = ['administrador', 'evaluador_social'] as const
 
 type ValoresEvaluacionFormulario = {
   fundamento: string
   recomendacion: string
+  periodicidad_propuesta?: string
 }
 
 export type EvaluacionFormState =
@@ -30,7 +32,8 @@ export async function registrarEvaluacion(
 
   const fundamento = formData.get('fundamento')?.toString().trim() ?? ''
   const recomendacion = formData.get('recomendacion')?.toString() ?? ''
-  const valores = { fundamento, recomendacion }
+  const periodicidadRaw = formData.get('periodicidad_propuesta')?.toString() ?? ''
+  const valores = { fundamento, recomendacion, periodicidad_propuesta: periodicidadRaw }
 
   if (!fundamento) {
     return { error: 'El fundamento no puede quedar vacío.', valores }
@@ -43,7 +46,7 @@ export async function registrarEvaluacion(
   const supabase = await createClient()
   const { data: solicitud, error: errorLectura } = await supabase
     .from('solicitudes')
-    .select('estado')
+    .select('estado, tipos_ayuda(periodicidad_beneficio)')
     .eq('id', solicitudId)
     .maybeSingle()
 
@@ -58,10 +61,24 @@ export async function registrarEvaluacion(
     }
   }
 
+  // MR-08: si la ayuda es un beneficio periódico y se recomienda aprobar,
+  // el gestor social propone con qué periodicidad se entrega.
+  const esPeriodica = Boolean(
+    (solicitud.tipos_ayuda as unknown as { periodicidad_beneficio: string | null } | null)?.periodicidad_beneficio
+  )
+  const periodicidadPropuesta =
+    esPeriodica && recomendacion === 'aprobar' && PERIODICIDADES_BENEFICIO.includes(periodicidadRaw as PeriodicidadBeneficio)
+      ? (periodicidadRaw as PeriodicidadBeneficio)
+      : null
+  if (esPeriodica && recomendacion === 'aprobar' && !periodicidadPropuesta) {
+    return { error: 'Propón la periodicidad del beneficio.', valores }
+  }
+
   const { error } = await supabase.from('evaluaciones_sociales').insert({
     solicitud_id: solicitudId,
     fundamento,
     recomendacion: recomendacion as RecomendacionEvaluacion,
+    periodicidad_propuesta: periodicidadPropuesta,
   })
 
   if (error) {

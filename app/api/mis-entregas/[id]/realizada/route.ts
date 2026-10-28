@@ -1,12 +1,15 @@
 import { revalidatePath } from 'next/cache'
 import { requireRole } from '@/lib/auth/dal'
 import { createClient } from '@/lib/supabase/server'
-import { obtenerEntregaAsignadaAlUsuario, aplicarResultadoEntregaSync } from '@/lib/entregas/registro'
+import {
+  obtenerEntregaAsignadaAlUsuario,
+  aplicarResultadoEntregaSync,
+  tieneEvidenciaPrevia,
+} from '@/lib/entregas/registro'
 import { obtenerSolicitud } from '@/lib/solicitudes/dal'
 import { obtenerTipoAyuda } from '@/lib/ayudas/dal'
 import { tieneSalidaStock } from '@/lib/inventario/dal'
 import { MENSAJE_SIN_SALIDA_STOCK } from '@/lib/entregas/types'
-import { listarDocumentosDeSolicitud } from '@/lib/documentos/dal'
 import { subirDocumentoSolicitud } from '@/lib/documentos/actions'
 import { tieneRol } from '@/lib/auth/roles'
 
@@ -45,7 +48,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   // MR-07: antes de subir la evidencia de una entrega que se va a rechazar.
-  if (entrega.estado === 'pendiente' && !(await tieneSalidaStock(entrega.solicitud_id))) {
+  if (entrega.estado === 'pendiente' && !(await tieneSalidaStock(entrega.solicitud_id, entrega.periodo))) {
     return Response.json({ error: MENSAJE_SIN_SALIDA_STOCK }, { status: 400 })
   }
 
@@ -56,9 +59,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const tieneArchivo = archivo instanceof File && archivo.size > 0
 
   if (tipoAyuda?.requiere_evidencia && !tieneArchivo) {
-    const documentosExistentes = await listarDocumentosDeSolicitud(entrega.solicitud_id)
-    const tieneEvidenciaPrevia = documentosExistentes.some((d) => d.tipo_documento === 'fotografia')
-    if (!tieneEvidenciaPrevia) {
+    if (!(await tieneEvidenciaPrevia(entrega.solicitud_id, entrega.periodo))) {
       return Response.json({ error: 'Esta ayuda requiere adjuntar evidencia fotográfica.' }, { status: 400 })
     }
   }

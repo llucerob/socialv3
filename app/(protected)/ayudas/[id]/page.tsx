@@ -3,6 +3,7 @@ import { getProfile } from '@/lib/auth/dal'
 import { obtenerTipoAyuda, obtenerHistorialTipoAyuda } from '@/lib/ayudas/dal'
 import { cambiarEstadoTipoAyuda } from '@/lib/ayudas/actions'
 import type { TipoAyuda } from '@/lib/ayudas/types'
+import { PERIODICIDAD_BENEFICIO_LABELS } from '@/lib/beneficios/types'
 import { Card } from '@/components/ui/Card'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
@@ -84,6 +85,11 @@ export default async function FichaTipoAyudaPage({
             : 'Sin tope monetario'}
         </p>
         <p className="mt-1 text-sm text-text-muted">Periodicidad: {tipoAyuda.periodicidad ?? '—'}</p>
+        <p className="mt-1 text-sm text-text-primary">
+          {tipoAyuda.periodicidad_beneficio
+            ? `Beneficio periódico hasta diciembre (por defecto ${PERIODICIDAD_BENEFICIO_LABELS[tipoAyuda.periodicidad_beneficio].toLowerCase()})`
+            : 'Ayuda única (una sola entrega)'}
+        </p>
       </Card>
 
       {puedeGestionar && (

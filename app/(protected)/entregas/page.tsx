@@ -14,6 +14,10 @@ import { GeorreferenciacionBadge } from '../hogares/georreferenciacion-badge'
 import { formatearFecha } from '@/lib/fechas'
 import { MODALIDAD_ENTREGA_LABELS } from '@/lib/entregas/types'
 import { tieneRol } from '@/lib/auth/roles'
+import { listarPeriodosPorPreparar } from '@/lib/beneficios/dal'
+import { etiquetaPeriodo, parametroDePeriodo } from '@/lib/beneficios/types'
+import { BadgeExcepcion } from '@/components/ui/ExcepcionRSH'
+import { ESTADO_ENTREGA_LABELS } from '@/lib/entregas/types'
 
 const ROLES_LOGISTICA = ['administrador', 'bodega_logistica'] as const
 
@@ -42,6 +46,11 @@ export default async function EntregasPage({
     ? ordenarParaRuta(entregas.filter((entrega) => entrega.estado === 'pendiente'))
     : []
   const funcionarios = sector ? await listarFuncionariosTerreno() : []
+  // MR-08: los períodos con plazo abierto de beneficios vigentes (incluye
+  // una entrega intermitente que se retira con atraso), con su salida de stock.
+  const periodosPorPreparar = (await listarPeriodosPorPreparar()).filter(
+    (p) => !sector || p.sector === sector
+  )
 
   return (
     <div className="space-y-8">
@@ -65,6 +74,47 @@ export default async function EntregasPage({
         </CampoFiltro>
       </FiltrosBar>
 
+      <Card header={<h2 className="font-medium text-text-primary">Beneficios periódicos por entregar</h2>}>
+        {periodosPorPreparar.length === 0 ? (
+          <p className="text-sm text-text-muted">
+            Sin beneficios pendientes este mes{sector ? ' en este sector' : ''}.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border text-sm">
+            {periodosPorPreparar.map((p) => (
+              <li key={`${p.solicitud_id}-${p.periodo}`}>
+                <Link
+                  href={p.ruta}
+                  className="flex flex-wrap items-center justify-between gap-2 py-2 hover:underline"
+                >
+                  <span className="min-w-0">
+                    <span className="font-medium capitalize text-text-primary">{etiquetaPeriodo(p.periodo)}</span>
+                    {p.ventana_hasta !== p.periodo && (
+                      <span className="ml-1 text-text-muted">(retiro hasta {etiquetaPeriodo(p.ventana_hasta)})</span>
+                    )}
+                    <span className="ml-2 text-text-primary">{p.tipo_ayuda_nombre}</span>
+                    <span className="ml-2 text-text-muted">
+                      {p.direccion}
+                      {p.persona_nombre ? ` · ${p.persona_nombre}` : ''}
+                      {` · ${MODALIDAD_ENTREGA_LABELS[p.modalidad].toLowerCase()}`}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {p.es_excepcion && <BadgeExcepcion texto="Excepción RSH" />}
+                    <span className={p.salida_registrada ? 'text-success-fg' : 'text-warning-fg'}>
+                      {p.salida_registrada ? 'Salida registrada' : 'Falta salida de stock'}
+                    </span>
+                    {p.estado_entrega && (
+                      <span className="text-text-muted">· {ESTADO_ENTREGA_LABELS[p.estado_entrega]}</span>
+                    )}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       {entregas.length === 0 ? (
         <p className="text-sm text-text-muted">
           Sin entregas para este filtro. Se registran desde una solicitud aprobada (en local o a domicilio).
@@ -73,8 +123,15 @@ export default async function EntregasPage({
         <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
           {entregas.map((entrega) => (
             <li key={entrega.id} className="flex items-center justify-between gap-3 px-4 py-3">
-              <Link href={`/solicitudes/${entrega.solicitud_id}`} className="min-w-0 flex-1 hover:underline">
+              <Link
+                href={`/solicitudes/${entrega.solicitud_id}${entrega.periodo ? `?periodo=${parametroDePeriodo(entrega.periodo)}` : ''}`}
+                className="min-w-0 flex-1 hover:underline"
+              >
                 <span className="font-medium text-text-primary">{entrega.tipo_ayuda_nombre}</span>
+                {/* MR-08 */}
+                {entrega.periodo && (
+                  <span className="ml-2 text-sm capitalize text-text-muted">{etiquetaPeriodo(entrega.periodo)}</span>
+                )}
                 {/* MR-06 */}
                 <span className="ml-2 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-800">
                   {MODALIDAD_ENTREGA_LABELS[entrega.modalidad]}

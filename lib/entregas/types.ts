@@ -1,9 +1,11 @@
-export type EstadoEntrega = 'pendiente' | 'realizada' | 'fallida'
+// MR-08: 'cancelada' = período pendiente de un beneficio que se suspendió.
+export type EstadoEntrega = 'pendiente' | 'realizada' | 'fallida' | 'cancelada'
 
 export const ESTADO_ENTREGA_LABELS: Record<EstadoEntrega, string> = {
   pendiente: 'Pendiente',
   realizada: 'Realizada',
   fallida: 'Fallida',
+  cancelada: 'Cancelada',
 }
 
 // MR-06: en local, la persona retira la ayuda en el Departamento Social y
@@ -24,6 +26,8 @@ export const MODALIDAD_ENTREGA_LABELS: Record<ModalidadEntrega, string> = {
 export type Entrega = {
   id: string
   solicitud_id: string
+  // MR-08: período del beneficio ('YYYY-MM-01'); null en una ayuda única.
+  periodo: string | null
   estado: EstadoEntrega
   modalidad: ModalidadEntrega
   fecha_programada: string | null
@@ -95,6 +99,10 @@ export type EntregaRealizadaDeHogar = {
   tipo_ayuda_nombre: string
   persona_nombre: string | null
   modalidad: ModalidadEntrega
+  periodo: string | null
+  // Aprobada por excepción RSH: se marca en cada entrega, también después
+  // de entregada (cuando la solicitud ya no dice 'aprobada_excepcion').
+  es_excepcion: boolean
   fecha_hora_entrega: string | null
   receptor_nombre: string | null
   receptor_relacion: string | null
@@ -104,6 +112,7 @@ export type EntregaRealizadaDeHogar = {
 
 export type EntregaLecturaSolicitud = {
   entrega_id: string
+  periodo: string | null
   estado: EstadoEntrega
   modalidad: ModalidadEntrega
   fecha_programada: string | null

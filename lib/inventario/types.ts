@@ -27,6 +27,9 @@ export type MovimientoStock = {
   // registrada" — opcional, y exclusivo de entradas (mismo criterio que
   // solicitud_id, exclusivo de salidas).
   compra_id: string | null
+  // MR-08: período del beneficio al que corresponde una salida (null en
+  // entradas y en ayudas únicas).
+  periodo: string | null
   observacion: string | null
   registrado_por: string
   created_at: string

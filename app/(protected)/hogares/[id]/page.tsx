@@ -14,6 +14,12 @@ import { NIVEL_CONFIDENCIALIDAD_LABELS } from '@/lib/informes-sociales/types'
 import { listarDocumentosDeHogar } from '@/lib/documentos/dal'
 import { listarEntregasRealizadasDeHogar } from '@/lib/entregas/dal'
 import { MODALIDAD_ENTREGA_LABELS } from '@/lib/entregas/types'
+import { listarBeneficiosDeHogar } from '@/lib/beneficios/dal'
+import {
+  ESTADO_BENEFICIO_LABELS,
+  PERIODICIDAD_BENEFICIO_LABELS,
+  etiquetaPeriodo,
+} from '@/lib/beneficios/types'
 import { subirDocumentoHogar, actualizarRetencionDocumento, eliminarDocumento } from '@/lib/documentos/actions'
 import { TIPOS_DOCUMENTO, type TipoDocumento } from '@/lib/documentos/types'
 import { DocumentoUploadForm } from '../../documento-upload-form'
@@ -86,6 +92,8 @@ export default async function FichaGrupoFamiliarPage({
   // (ROLES_VER_HOGAR ya autoriza esta página), así que no hace falta un
   // gate de rol adicional para esta consulta.
   const ayudasEntregadas = await listarEntregasRealizadasDeHogar(id)
+  // MR-08: beneficios periódicos del hogar (vigentes y anteriores).
+  const beneficios = await listarBeneficiosDeHogar(id)
   const anioActual = new Date().getFullYear()
   const ayudasEsteAnio = ayudasEntregadas.filter(
     (e) => e.fecha_hora_entrega && new Date(e.fecha_hora_entrega).getFullYear() === anioActual
@@ -394,6 +402,50 @@ export default async function FichaGrupoFamiliarPage({
             )}
           </section>
 
+          {beneficios.length > 0 && (
+            <section>
+              <h2 className="font-medium text-text-primary">Beneficios periódicos</h2>
+              <ul className="mt-2 divide-y divide-border rounded-xl border border-border bg-surface">
+                {beneficios.map((beneficio) => (
+                  <li key={beneficio.beneficio_id}>
+                    <Link
+                      href={`/solicitudes/${beneficio.solicitud_id}`}
+                      className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-surface-alt"
+                    >
+                      <span>
+                        <span className="font-medium text-text-primary">{beneficio.tipo_ayuda_nombre}</span>
+                        {beneficio.persona_nombre && (
+                          <span className="ml-2 text-sm text-text-muted">{beneficio.persona_nombre}</span>
+                        )}
+                        <span className="mt-1 block text-sm text-text-muted">
+                          {PERIODICIDAD_BENEFICIO_LABELS[beneficio.periodicidad]} ·{' '}
+                          {MODALIDAD_ENTREGA_LABELS[beneficio.modalidad].toLowerCase()} · {etiquetaPeriodo(beneficio.vigente_desde)}{' '}
+                          a {formatearFecha(beneficio.vigente_hasta)}
+                        </span>
+                        <span className="mt-1 block text-sm text-text-primary">
+                          {beneficio.periodos_entregados} de {beneficio.total_periodos} entregados · última:{' '}
+                          {beneficio.ultima_entrega ? new Date(beneficio.ultima_entrega).toLocaleDateString('es-CL') : '—'} ·
+                          próxima: {beneficio.proximo_periodo ? etiquetaPeriodo(beneficio.proximo_periodo) : '—'}
+                        </span>
+                        {beneficio.estado === 'suspendido' && beneficio.motivo_suspension && (
+                          <span className="mt-1 block text-sm text-text-muted">
+                            Suspendido: {beneficio.motivo_suspension}
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        {beneficio.es_excepcion && <BadgeExcepcion texto="Excepción RSH" />}
+                        <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-800">
+                          {ESTADO_BENEFICIO_LABELS[beneficio.estado]}
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section>
             <h2 className="font-medium text-text-primary">Ayudas entregadas</h2>
             {ayudasEntregadas.length === 0 ? (
@@ -415,6 +467,15 @@ export default async function FichaGrupoFamiliarPage({
                         <span className="ml-2 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-800">
                           {MODALIDAD_ENTREGA_LABELS[entrega.modalidad]}
                         </span>
+                        {/* MR-08 */}
+                        {entrega.periodo && (
+                          <span className="ml-2 text-sm text-text-muted">· {etiquetaPeriodo(entrega.periodo)}</span>
+                        )}
+                        {entrega.es_excepcion && (
+                          <span className="ml-2">
+                            <BadgeExcepcion texto="Excepción RSH" />
+                          </span>
+                        )}
                         <span className="mt-1 block text-sm text-text-muted">
                           Recibió: {entrega.receptor_nombre ?? '—'}
                           {entrega.receptor_relacion && ` (${entrega.receptor_relacion})`}

@@ -19,6 +19,9 @@ import {
   TOPE_MENSUAL_DIALISIS,
 } from '@/lib/reembolsos/tramos'
 import { contarInformesSocialesDeSolicitud } from '@/lib/informes-sociales/dal'
+import type { TipoAyuda } from '@/lib/ayudas/types'
+import { PERIODICIDADES_BENEFICIO, mensajeErrorBeneficio, type PeriodicidadBeneficio } from '@/lib/beneficios/types'
+import type { ModalidadEntrega } from '@/lib/entregas/types'
 
 // US-09.01/09.02: "solo rol aprobador puede aprobar/rechazar" — igual que el
 // resto del proyecto, administrador actúa como superusuario junto al rol
@@ -39,6 +42,8 @@ type ValoresDecisionFormulario = {
   comentario: string
   monto_aprobado: string
   cantidad_aprobada: string
+  periodicidad?: string
+  modalidad_entrega?: string
 }
 
 export type DecisionFormState =
@@ -188,6 +193,34 @@ async function validarTopesReembolso(
   return null
 }
 
+// MR-08: la aprobación de un beneficio periódico confirma su periodicidad
+// y su modalidad de entrega (por defecto a domicilio). Al pasar la solicitud
+// a aprobada, la base crea el beneficio (trigger solicitudes_crear_beneficio)
+// con la vigencia desde este mes hasta diciembre. Para una ayuda única
+// devuelve nulls.
+type DatosBeneficio = { periodicidad: PeriodicidadBeneficio | null; modalidad_entrega: ModalidadEntrega | null }
+
+function leerDatosBeneficio(
+  formData: FormData,
+  tipoAyuda: TipoAyuda
+): { ok: true; datos: DatosBeneficio } | { ok: false; error: string } {
+  if (!tipoAyuda.periodicidad_beneficio) {
+    return { ok: true, datos: { periodicidad: null, modalidad_entrega: null } }
+  }
+
+  const periodicidad = formData.get('periodicidad')?.toString() as PeriodicidadBeneficio
+  if (!PERIODICIDADES_BENEFICIO.includes(periodicidad)) {
+    return { ok: false, error: 'Selecciona la periodicidad del beneficio.' }
+  }
+
+  const modalidad = formData.get('modalidad_entrega')?.toString() === 'local' ? 'local' : 'domicilio'
+  if (modalidad === 'local' && !(tipoAyuda.requiere_entrega && tipoAyuda.permite_entrega_local)) {
+    return { ok: false, error: 'Este tipo de ayuda no permite entrega en local.' }
+  }
+
+  return { ok: true, datos: { periodicidad, modalidad_entrega: modalidad } }
+}
+
 // US-09.03: para ayudas de tipo 'reembolso' se exige monto_aprobado (sin
 // superar monto_solicitado); para ayudas físicas se exige cantidad_aprobada
 // (texto libre). US-14.03/14.06: para reembolso médico general, además, el
@@ -208,7 +241,13 @@ export async function aprobarSolicitud(
   const comentario = formData.get('comentario')?.toString().trim() || null
   const montoRaw = formData.get('monto_aprobado')?.toString().trim() ?? ''
   const cantidadRaw = formData.get('cantidad_aprobada')?.toString().trim() ?? ''
-  const valores = { comentario: comentario ?? '', monto_aprobado: montoRaw, cantidad_aprobada: cantidadRaw }
+  const valores = {
+    comentario: comentario ?? '',
+    monto_aprobado: montoRaw,
+    cantidad_aprobada: cantidadRaw,
+    periodicidad: formData.get('periodicidad')?.toString() ?? '',
+    modalidad_entrega: formData.get('modalidad_entrega')?.toString() ?? '',
+  }
 
   const validacion = await validarContexto(solicitudId)
   if (!validacion.ok) {
@@ -231,6 +270,11 @@ export async function aprobarSolicitud(
   const tipoAyuda = await obtenerTipoAyuda(validacion.contexto.tipoAyudaId)
   if (!tipoAyuda) {
     return { error: 'Tipo de ayuda no encontrado.', valores }
+  }
+
+  const beneficio = leerDatosBeneficio(formData, tipoAyuda)
+  if (!beneficio.ok) {
+    return { error: beneficio.error, valores }
   }
 
   let montoAprobado: number | null = null
@@ -289,10 +333,11 @@ export async function aprobarSolicitud(
     comentario,
     monto_aprobado: montoAprobado,
     cantidad_aprobada: cantidadAprobada,
+    ...beneficio.datos,
   })
 
   if (errorInsert) {
-    return { error: 'No se pudo registrar la decisión.', valores }
+    return { error: mensajeErrorBeneficio(errorInsert.message) ?? 'No se pudo registrar la decisión.', valores }
   }
 
   const { error: errorUpdate } = await supabase
@@ -407,6 +452,8 @@ type ValoresExcepcionRshFormulario = {
   autoridad_solicitante: string
   monto_aprobado: string
   cantidad_aprobada: string
+  periodicidad?: string
+  modalidad_entrega?: string
 }
 
 export type ExcepcionRshFormState =
@@ -442,6 +489,8 @@ export async function aprobarExcepcionRsh(
     autoridad_solicitante: autoridadSolicitante,
     monto_aprobado: montoRaw,
     cantidad_aprobada: cantidadRaw,
+    periodicidad: formData.get('periodicidad')?.toString() ?? '',
+    modalidad_entrega: formData.get('modalidad_entrega')?.toString() ?? '',
   }
 
   if (!motivo) {
@@ -474,6 +523,11 @@ export async function aprobarExcepcionRsh(
   const tipoAyuda = await obtenerTipoAyuda(validacion.contexto.tipoAyudaId)
   if (!tipoAyuda) {
     return { error: 'Tipo de ayuda no encontrado.', valores }
+  }
+
+  const beneficio = leerDatosBeneficio(formData, tipoAyuda)
+  if (!beneficio.ok) {
+    return { error: beneficio.error, valores }
   }
 
   let montoAprobado: number | null = null
@@ -521,10 +575,11 @@ export async function aprobarExcepcionRsh(
     autoridad_solicitante: autoridadSolicitante,
     monto_aprobado: montoAprobado,
     cantidad_aprobada: cantidadAprobada,
+    ...beneficio.datos,
   })
 
   if (errorInsert) {
-    return { error: 'No se pudo registrar la decisión.', valores }
+    return { error: mensajeErrorBeneficio(errorInsert.message) ?? 'No se pudo registrar la decisión.', valores }
   }
 
   const { error: errorUpdate } = await supabase

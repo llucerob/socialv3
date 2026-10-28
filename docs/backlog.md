@@ -658,3 +658,60 @@ Al terminar este backlog MVP, el sistema permitirá, además de todo lo ya cubie
   - El botón de la entrega en local dice "Marcar como entregada".
 - **Terreno.** Si a una entrega asignada le falta la salida de stock, "Mis entregas" lo avisa y no ofrece "Marcar como realizada" hasta que bodega la registre.
 - **Excepción: datos migrados.** La regla no aplica a solicitudes con `origen = 'migracion'`: el sistema anterior no llevaba inventario y la carga histórica inserta unas 12.100 entregas realizadas sin salida de stock (migración `20261028000003`).
+
+### MR-08 ✅ — La aprobación otorga un beneficio periódico vigente hasta diciembre
+**Relacionada con:** US-06.02, US-08.01, US-09.01, US-11.03, US-12.01, US-03.04, MR-06, MR-07. Maestro §11 ("periodicidad mensual, mes por medio, semestral", "consultas de última/próxima entrega"), que cierra el pendiente de "próxima entrega estimada".
+**Pedido:** la evaluación social decide si el hogar accede a un beneficio. Una vez otorgado, el beneficio se entrega con cierta periodicidad hasta diciembre del año en curso. Hoy cada solicitud aprobada genera una sola entrega y la periodicidad del catálogo es un texto que no se usa.
+**Decisiones del cliente (2026-10-28):**
+- La periodicidad se define **por caso al aprobar**: el gestor social la propone en la evaluación y el aprobador la confirma o la cambia. El catálogo solo sugiere un valor por defecto.
+- Son periódicos **Caja de mercadería** y **Pañales de adulto**. Materiales de construcción y los reembolsos siguen como ayuda única.
+- Cada período **sale directo**: no se vuelve a evaluar. Sí exige su propia salida de stock (MR-07).
+- El beneficio **parte el mismo mes de aprobación**.
+- La **modalidad de entrega** (en local o a domicilio) se decide al aprobar, **por defecto a domicilio**. Aunque el beneficio sea a domicilio, la persona puede venir a retirar al local la entrega de cualquier período.
+**Criterios de aceptación:**
+- **Periodicidad:** mensual, mes por medio o semestral. Se guarda con la decisión de aprobación, también cuando es aprobación por excepción RSH, y su cambio queda auditado. El catálogo marca por tipo de ayuda si es periódico y cuál es su periodicidad por defecto (nueva regla, editable por el administrador y auditada como las demás).
+- **Vigencia:** desde el mes de aprobación hasta el 31 de diciembre del mismo año. Ejemplos: si se aprueba en septiembre, la mensual da 4 entregas (septiembre a diciembre), la de mes por medio da 2 (septiembre y noviembre) y la semestral da 1. En enero el beneficio vence y el hogar necesita una nueva solicitud y evaluación. No se renueva solo.
+- **Modalidad del beneficio:** se elige al aprobar, junto a la periodicidad, con "A domicilio" preseleccionado. Solo se ofrece "En local" si el tipo de ayuda lo permite (MR-06). La modalidad queda en la decisión, auditada, y la heredan todas las entregas del beneficio. El gestor social, el aprobador o el administrador pueden cambiarla mientras el beneficio esté vigente (por ejemplo, si el hogar empieza a retirar en el local), con motivo y sin afectar lo ya entregado.
+- **Plazo y desplazamiento (decisión del cliente 2026-10-28):** un mes atrasado no se entrega.
+  - **Mensual:** cada entrega se retira en su mes; el mes que no se retira se pierde.
+  - **Entrega intermitente (mes por medio, semestral):** la entrega se puede retirar con atraso hasta antes de que toque la siguiente. Si se retira con atraso, el calendario se reestructura desde el mes del retiro. Ejemplo: mes por medio entregada en el mes 1; en el mes 3 no asiste y la retira en el mes 4; la siguiente es el mes 6. Si no la retira dentro de su plazo, se pierde y el calendario sigue como estaba.
+  - **Fin de año:** después del 31 de diciembre no hay entregas, tampoco completar una ya programada.
+- **Caso fortuito:** un beneficio en local no se programa a domicilio, salvo como caso fortuito de un mes. Bodega lo hace desde la solicitud, sin motivo escrito, y el beneficio sigue en local para los demás meses.
+- **Cancelación automática:** las entregas programadas o fallidas cuyo plazo venció, o de un beneficio vencido después del 31 de diciembre, se cancelan solas (`cancelar_entregas_vencidas()`, migración `20261028000007`). Corre a diario con pg_cron y también al abrir las listas de entregas y el calendario de la solicitud. Queda en el historial de la entrega y sale de "Mis entregas" y de la ruta.
+- **Retiro en local de un beneficio a domicilio:** si la persona viene a retirar al local la entrega de un período, se registra como entrega en local (mismo flujo de MR-06). Ese período queda "En local" en su historial y los demás períodos siguen a domicilio. Si esa entrega ya estaba asignada a terreno, sale de "Mis entregas", "Rutas" y la caché offline.
+- **Entregas por período:** una solicitud periódica tiene una entrega por período (deja de existir la regla "una entrega por solicitud"), identificada por su mes y sin duplicados. Cada entrega exige su propia salida de stock (MR-07) y su propia foto de evidencia. No se puede entregar un período futuro antes de su mes.
+- **Estado de la solicitud:** sigue "aprobada" mientras el beneficio esté vigente. Pasa a "entregada" al completarse el último período del año.
+- **Suspensión:** el gestor social, el aprobador o el administrador pueden suspender un beneficio vigente con motivo obligatorio. Los períodos pendientes quedan cancelados, lo ya entregado se conserva y la suspensión queda en el historial de la solicitud y del hogar.
+- **Visibilidad:** en el detalle de la solicitud y en la ficha del hogar ("Solicitudes y ayudas") se muestran el beneficio vigente, la periodicidad, la vigencia, la última entrega, la próxima entrega y el avance (por ejemplo, "2 de 4 entregados"). Bodega ve qué períodos del mes en curso necesitan salida de stock.
+- **Excepciones visibles:** un beneficio aprobado por excepción RSH muestra la marca de excepción en cada una de sus entregas.
+- **Datos migrados:** las solicitudes con `origen = 'migracion'` quedan como ayudas únicas, con su entrega histórica intacta.
+- La regla vive en la base (períodos, vigencia, salida de stock por período), no solo en la pantalla.
+**Implementación (2026-10-28):**
+- Migraciones `20261028000004` (estado de entrega `cancelada`) y `20261028000005_beneficios_periodicos.sql`.
+- **Catálogo:** `tipos_ayuda.periodicidad_beneficio` (null = ayuda única). Caja y Pañales quedan en mensual por defecto. El texto libre `periodicidad` se mantiene como descripción.
+- **Propuesta y decisión:** el gestor propone la periodicidad (`evaluaciones_sociales.periodicidad_propuesta`). El aprobador la confirma junto con la modalidad (`decisiones_solicitud.periodicidad` / `modalidad_entrega`), en la aprobación regular y en la excepción RSH.
+- **Beneficio:** tabla `beneficios`, que cuelga de `grupos_familiares` y se crea sola al pasar la solicitud de "en evaluación" a aprobada. Guarda la vigencia, la modalidad vigente, la marca de excepción RSH (`es_excepcion`, que no se pierde al entregar) y la suspensión. Los cambios pasan solo por `cambiar_modalidad_beneficio()` y `suspender_beneficio()`, con motivo y registro en `beneficios_historial`.
+- **Calendario:** fuente única en `calendario_beneficio()` (migración `20261028000006`, que reemplazó a `periodos_beneficio()`). Cada período se identifica por el mes en que le corresponde, tiene un plazo de retiro y un estado: entregado (con el mes real), no entregado, abierto, por venir (estimado) o cancelado. Las entregas y salidas de stock llevan `periodo` (primer día del mes). Un período por solicitud con beneficio, y una sola entrega para la ayuda única (`periodo` null).
+- **Triggers:** validan que el período pertenezca al beneficio, que ya haya comenzado, que el beneficio no esté vencido ni suspendido y que exista la salida de stock de ese período (MR-07).
+- **Detalle de la solicitud:** sección "Beneficio" con el resumen y el calendario. Cada mes enlaza a `?periodo=AAAA-MM`, que es el período que trabajan "Stock" y "Entrega".
+- **Ficha del hogar:** "Beneficios periódicos" y período y excepción en "Ayudas entregadas".
+- **Bodega:** "Beneficios periódicos por entregar" en `/entregas`, con los períodos de plazo abierto y hasta cuándo se pueden retirar.
+- **Evidencia:** en un beneficio cada período exige su propia foto; la de un mes anterior no cuenta.
+- **Reportes:** "Ayudas entregadas" y "Hogares beneficiados" cuentan cada período entregado. Para las ayudas únicas los resultados no cambian (verificado: 25 = 25 en la base local).
+- **Suspensión:** cierra la solicitud ("cerrada") y no se puede deshacer. Para retomar la ayuda, el hogar necesita una nueva solicitud.
+- **Verificado en la base local:** 39 casos de reglas y permisos por rol, más el vencimiento. `tsc`, `lint` y `next build` limpios.
+- **Verificado en navegador (2026-10-28):** con un usuario administrador temporal en la base local se hizo el flujo completo:
+  - El gestor propone la periodicidad, el aprobador la cambia y la modalidad viene en "A domicilio".
+  - Al aprobar se creó el beneficio de octubre a diciembre.
+  - Se registró la salida de stock de octubre, se programó a domicilio y se registró el retiro en local de ese mes. El beneficio siguió a domicilio, el avance quedó en 1 de 3, la próxima entrega en noviembre y la solicitud siguió aprobada.
+  - Noviembre quedó bloqueado hasta su mes.
+  - Se cambió la modalidad con motivo y quedó en el historial.
+  - La ficha del hogar y `/entregas` mostraron los beneficios, la lista "por entregar" (con la marca de excepción RSH y el aviso de salida de stock) y el período en cada entrega.
+  - Se suspendió un beneficio: la solicitud quedó cerrada, sin próxima entrega y con el motivo en el historial.
+  - El catálogo mostró el selector y el resumen del beneficio.
+  - Los datos de prueba y el usuario se borraron después.
+- **Carga del sistema anterior (decisión del cliente, 2026-10-28):** del sistema anterior se migrarán solo los beneficiarios (hogares e integrantes), no las entregas pasadas. Las reglas de `origen = 'migracion'` (MR-07 y esta historia) se mantienen y no estorban.
+- **Ajuste del calendario verificado:**
+  - En la base: 16 casos simulando meses dentro de una transacción revertida. Incluye el ejemplo del cliente; el mensual con mes perdido; una entrega programada que no se completa fuera de plazo ni en enero; el semestral retirado con atraso; y la solicitud que se cierra con un mes perdido.
+  - En el navegador: el plazo de retiro en el calendario y en la lista de bodega, y el caso fortuito. Este programó a domicilio un mes sin cambiar el beneficio, que siguió en local.
+- **No verificado:** la vista en móvil de la sección "Beneficio". Las capturas de pantalla del navegador no respondían en esta sesión.

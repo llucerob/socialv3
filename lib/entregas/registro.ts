@@ -1,6 +1,8 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
 import { ERROR_SIN_SALIDA_STOCK, MENSAJE_SIN_SALIDA_STOCK } from '@/lib/entregas/types'
+import { mensajeErrorBeneficio } from '@/lib/beneficios/types'
+import { listarDocumentosDeSolicitud } from '@/lib/documentos/dal'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -13,13 +15,23 @@ export async function obtenerEntregaAsignadaAlUsuario(entregaId: string, usuario
   const supabase = await createClient()
   const { data: entrega, error } = await supabase
     .from('entregas')
-    .select('id, estado, solicitud_id, responsable_id, capturado_en, updated_at')
+    .select('id, estado, solicitud_id, periodo, responsable_id, capturado_en, updated_at')
     .eq('id', entregaId)
     .maybeSingle()
 
   if (error || !entrega) return null
   if (!esAdmin && entrega.responsable_id !== usuarioId) return null
   return entrega
+}
+
+// US-12.04: la evidencia ya subida a la solicitud sirve para su única
+// entrega. MR-08: en un beneficio periódico cada período es una entrega
+// distinta, así que la foto de un mes anterior no cuenta: se exige una nueva.
+// Compartida por la Server Action online y la ruta offline.
+export async function tieneEvidenciaPrevia(solicitudId: string, periodo: string | null): Promise<boolean> {
+  if (periodo) return false
+  const documentosExistentes = await listarDocumentosDeSolicitud(solicitudId)
+  return documentosExistentes.some((d) => d.tipo_documento === 'fotografia')
 }
 
 type EntregaAsignada = NonNullable<Awaited<ReturnType<typeof obtenerEntregaAsignadaAlUsuario>>>
@@ -53,7 +65,7 @@ export async function aplicarResultadoEntregaSync(
       // MR-07: el trigger rechaza marcarla realizada sin salida de stock.
       const mensaje = error.message?.includes(ERROR_SIN_SALIDA_STOCK)
         ? MENSAJE_SIN_SALIDA_STOCK
-        : 'No se pudo registrar la entrega.'
+        : (mensajeErrorBeneficio(error.message) ?? 'No se pudo registrar la entrega.')
       return { ok: false, conflicto: false, mensaje }
     }
     return { ok: true }

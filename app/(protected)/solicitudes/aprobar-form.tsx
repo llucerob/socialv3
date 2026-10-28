@@ -5,6 +5,7 @@ import { aprobarSolicitud, type DecisionFormState } from '@/lib/decisiones/actio
 import { TOPE_ANUAL_POR_GRUPO_FAMILIAR, TOPE_MENSUAL_DIALISIS } from '@/lib/reembolsos/tramos'
 import { Button } from '@/components/ui/Button'
 import { MedidorTope } from '@/components/ui/MedidorTope'
+import { CamposBeneficio, type DatosBeneficioAprobacion } from './campos-beneficio'
 
 export function AprobarForm({
   solicitudId,
@@ -12,9 +13,12 @@ export function AprobarForm({
   topeReembolsoGeneral,
   topeDialisis,
   remanenteExcepcional,
+  beneficio,
 }: {
   solicitudId: string
   esReembolso: boolean
+  // MR-08: solo para un beneficio periódico.
+  beneficio?: DatosBeneficioAprobacion
   // US-14.05/14.06: informativo — el tope real se valida igual en el
   // servidor (aprobarSolicitud), esto solo evita un viaje de ida y vuelta
   // innecesario cuando el monto ya se ve fuera de rango.
@@ -130,6 +134,15 @@ export function AprobarForm({
             className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
           />
         </div>
+      )}
+
+      {beneficio && (
+        <CamposBeneficio
+          beneficio={beneficio}
+          valores={valores}
+          sufijoId="aprobar"
+          claseCampo="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm text-text-primary"
+        />
       )}
 
       <div className="space-y-1">

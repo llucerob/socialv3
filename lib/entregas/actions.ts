@@ -6,12 +6,12 @@ import { requireRole } from '@/lib/auth/dal'
 import { obtenerSolicitud } from '@/lib/solicitudes/dal'
 import { obtenerTipoAyuda } from '@/lib/ayudas/dal'
 import { subirDocumentoSolicitud } from '@/lib/documentos/actions'
-import { listarDocumentosDeSolicitud } from '@/lib/documentos/dal'
 import { obtenerMotivoEntregaFallida } from '@/lib/motivos-entrega/dal'
-import { obtenerEntregaAsignadaAlUsuario } from '@/lib/entregas/registro'
+import { obtenerEntregaAsignadaAlUsuario, tieneEvidenciaPrevia } from '@/lib/entregas/registro'
 import { tieneRol } from '@/lib/auth/roles'
 import { tieneSalidaStock } from '@/lib/inventario/dal'
 import { ERROR_SIN_SALIDA_STOCK, MENSAJE_SIN_SALIDA_STOCK } from '@/lib/entregas/types'
+import { mensajeErrorBeneficio } from '@/lib/beneficios/types'
 
 // US-12.01/US-12.02: "como bodega o logística" crea y asigna entregas.
 const ROLES_LOGISTICA = ['administrador', 'bodega_logistica'] as const
@@ -34,8 +34,11 @@ export type CrearEntregaFormState =
 // entrega queda asociada a la solicitud" (dirección se resuelve por join,
 // ver lib/entregas/dal.ts) · "la entrega queda en estado pendiente" (default
 // de columna) · "se puede asignar responsable" (opcional en esta misma acción).
+// MR-08: en un beneficio periódico la entrega es de un período; el trigger
+// entregas_validar_periodo exige que pertenezca al beneficio y ya haya comenzado.
 export async function crearEntrega(
   solicitudId: string,
+  periodo: string | null,
   _prevState: CrearEntregaFormState,
   formData: FormData
 ): Promise<CrearEntregaFormState> {
@@ -61,13 +64,14 @@ export async function crearEntrega(
   }
 
   // MR-07: también lo exige el trigger; aquí da el mensaje antes de intentar.
-  if (!(await tieneSalidaStock(solicitudId))) {
+  if (!(await tieneSalidaStock(solicitudId, periodo))) {
     return { error: MENSAJE_SIN_SALIDA_STOCK, valores }
   }
 
   const supabase = await createClient()
   const { error } = await supabase.from('entregas').insert({
     solicitud_id: solicitudId,
+    periodo,
     modalidad: 'domicilio',
     fecha_programada: valores.fecha_programada || null,
     responsable_id: valores.responsable_id || null,
@@ -77,10 +81,12 @@ export async function crearEntrega(
     return {
       error:
         error.code === '23505'
-          ? 'Ya existe una entrega para esta solicitud.'
+          ? periodo
+            ? 'Ya existe una entrega para este período.'
+            : 'Ya existe una entrega para esta solicitud.'
           : error.message?.includes(ERROR_SIN_SALIDA_STOCK)
             ? MENSAJE_SIN_SALIDA_STOCK
-            : 'No se pudo crear la entrega.',
+            : (mensajeErrorBeneficio(error.message) ?? 'No se pudo crear la entrega.'),
       valores,
     }
   }
@@ -190,7 +196,7 @@ export async function reprogramarEntrega(
     .eq('id', entregaId)
 
   if (error) {
-    return { error: 'No se pudo reprogramar la entrega.', valores }
+    return { error: mensajeErrorBeneficio(error.message) ?? 'No se pudo reprogramar la entrega.', valores }
   }
 
   revalidatePath(`/solicitudes/${entrega.solicitud_id}`)
@@ -245,7 +251,7 @@ export async function registrarEntregaRealizada(
     return { error: 'Solo se puede registrar el resultado de una entrega pendiente.', valores }
   }
   // MR-07: antes de subir la evidencia de una entrega que se va a rechazar.
-  if (!(await tieneSalidaStock(entrega.solicitud_id))) {
+  if (!(await tieneSalidaStock(entrega.solicitud_id, entrega.periodo))) {
     return { error: MENSAJE_SIN_SALIDA_STOCK, valores }
   }
 
@@ -256,9 +262,7 @@ export async function registrarEntregaRealizada(
   const tieneArchivo = archivo instanceof File && archivo.size > 0
 
   if (tipoAyuda?.requiere_evidencia && !tieneArchivo) {
-    const documentosExistentes = await listarDocumentosDeSolicitud(entrega.solicitud_id)
-    const tieneEvidenciaPrevia = documentosExistentes.some((d) => d.tipo_documento === 'fotografia')
-    if (!tieneEvidenciaPrevia) {
+    if (!(await tieneEvidenciaPrevia(entrega.solicitud_id, entrega.periodo))) {
       return { error: 'Esta ayuda requiere adjuntar evidencia fotográfica.', valores }
     }
   }
@@ -294,7 +298,7 @@ export async function registrarEntregaRealizada(
     return {
       error: errorUpdate.message?.includes(ERROR_SIN_SALIDA_STOCK)
         ? MENSAJE_SIN_SALIDA_STOCK
-        : 'No se pudo registrar la entrega.',
+        : (mensajeErrorBeneficio(errorUpdate.message) ?? 'No se pudo registrar la entrega.'),
       valores,
     }
   }
@@ -391,9 +395,11 @@ const ERRORES_ENTREGA_LOCAL: Record<string, string> = {
 // las valida registrar_entrega_local() en la base; aquí se revisan antes
 // solo para no subir la evidencia de una entrega que se va a rechazar. Si
 // había una entrega a domicilio pendiente o fallida, la misma entrega pasa
-// a "en local" (la persona vino a retirarla).
+// a "en local" (la persona vino a retirarla). MR-08: en un beneficio
+// periódico es la entrega de un período, aunque el beneficio sea a domicilio.
 export async function registrarEntregaLocal(
   solicitudId: string,
+  periodo: string | null,
   _prevState: EntregaLocalFormState,
   formData: FormData
 ): Promise<EntregaLocalFormState> {
@@ -421,18 +427,15 @@ export async function registrarEntregaLocal(
   if (!tipoAyuda?.requiere_entrega || !tipoAyuda.permite_entrega_local) {
     return { error: ERRORES_ENTREGA_LOCAL.NO_PERMITE_ENTREGA_LOCAL, valores }
   }
-  if (!(await tieneSalidaStock(solicitudId))) {
+  if (!(await tieneSalidaStock(solicitudId, periodo))) {
     return { error: MENSAJE_SIN_SALIDA_STOCK, valores }
   }
 
   // Misma regla de evidencia que la entrega a domicilio (US-12.04).
   const archivo = formData.get('archivo')
   const tieneArchivo = archivo instanceof File && archivo.size > 0
-  if (tipoAyuda.requiere_evidencia && !tieneArchivo) {
-    const documentosExistentes = await listarDocumentosDeSolicitud(solicitudId)
-    if (!documentosExistentes.some((d) => d.tipo_documento === 'fotografia')) {
-      return { error: 'Esta ayuda requiere adjuntar evidencia fotográfica.', valores }
-    }
+  if (tipoAyuda.requiere_evidencia && !tieneArchivo && !(await tieneEvidenciaPrevia(solicitudId, periodo))) {
+    return { error: 'Esta ayuda requiere adjuntar evidencia fotográfica.', valores }
   }
   if (tieneArchivo) {
     const resultadoSubida = await subirDocumentoSolicitud(solicitudId, undefined, formData)
@@ -444,6 +447,7 @@ export async function registrarEntregaLocal(
   const supabase = await createClient()
   const { error } = await supabase.rpc('registrar_entrega_local', {
     p_solicitud_id: solicitudId,
+    p_periodo: periodo,
     p_fecha_hora: valores.fecha_hora ? new Date(valores.fecha_hora).toISOString() : null,
     p_receptor_nombre: valores.receptor_nombre,
     p_receptor_relacion: valores.receptor_relacion,
@@ -452,7 +456,12 @@ export async function registrarEntregaLocal(
 
   if (error) {
     const codigo = Object.keys(ERRORES_ENTREGA_LOCAL).find((clave) => error.message?.includes(clave))
-    return { error: codigo ? ERRORES_ENTREGA_LOCAL[codigo] : 'No se pudo registrar la entrega.', valores }
+    return {
+      error: codigo
+        ? ERRORES_ENTREGA_LOCAL[codigo]
+        : (mensajeErrorBeneficio(error.message) ?? 'No se pudo registrar la entrega.'),
+      valores,
+    }
   }
 
   revalidatePath(`/solicitudes/${solicitudId}`)

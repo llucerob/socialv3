@@ -7,7 +7,7 @@ import { ESTADO_PERSONA_LABELS, type EstadoPersona } from '@/lib/personas/types'
 // Sistema de diseño Coinco — badge de estado transversal. Cubre los estados
 // REALES de los esquemas ya implementados (no se inventan nombres): 12
 // estados de solicitudes (incluye reembolsos, que reutilizan EstadoSolicitud
-// — no tienen enum propio), 3 de entregas, 2 de incidentes de seguridad, 2 de
+// — no tienen enum propio), 4 de entregas, 2 de incidentes de seguridad, 2 de
 // grupo familiar y 4 de persona (agregados en el Prompt 2 al vestir la ficha
 // de hogar — ningún componente base los cubría todavía).
 // `aprobada_excepcion` usa el tono `exception` (dorado, CLAUDE.md: "las
@@ -49,6 +49,8 @@ const TONO_POR_ESTADO: Record<EstadoBadgeValor, Tono> = {
   pendiente: 'warning',
   realizada: 'success',
   fallida: 'danger',
+  // MR-08: período de un beneficio suspendido.
+  cancelada: 'neutral',
   // Incidentes de seguridad (lib/incidentes/types.ts)
   abierto: 'brand',
   cerrado: 'neutral',

@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import type { TipoAyudaFormState } from '@/lib/ayudas/actions'
 import type { TipoAyuda } from '@/lib/ayudas/types'
+import { PERIODICIDADES_BENEFICIO, PERIODICIDAD_BENEFICIO_LABELS } from '@/lib/beneficios/types'
 import { Button } from '@/components/ui/Button'
 
 type TipoAyudaFormAction = (
@@ -114,7 +115,7 @@ export function TipoAyudaForm({
         </div>
         <div className="space-y-1">
           <label htmlFor="periodicidad" className="text-sm font-medium text-text-primary">
-            Periodicidad
+            Periodicidad (descripción)
           </label>
           <input
             id="periodicidad"
@@ -123,6 +124,30 @@ export function TipoAyudaForm({
             className={claseCampo}
           />
         </div>
+      </div>
+
+      {/* MR-08 */}
+      <div className="space-y-1">
+        <label htmlFor="periodicidad_beneficio" className="text-sm font-medium text-text-primary">
+          Beneficio periódico
+        </label>
+        <select
+          id="periodicidad_beneficio"
+          name="periodicidad_beneficio"
+          defaultValue={valores?.periodicidad_beneficio ?? defaultValues?.periodicidad_beneficio ?? ''}
+          className={claseCampo}
+        >
+          <option value="">No: ayuda única (una sola entrega)</option>
+          {PERIODICIDADES_BENEFICIO.map((periodicidad) => (
+            <option key={periodicidad} value={periodicidad}>
+              Sí, {PERIODICIDAD_BENEFICIO_LABELS[periodicidad].toLowerCase()} por defecto
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-text-muted">
+          Al aprobar, el beneficio se entrega cada período desde el mes de aprobación hasta diciembre. El
+          aprobador confirma la periodicidad de cada caso. Requiere entrega.
+        </p>
       </div>
 
       {state?.error && (
