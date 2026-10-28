@@ -8,12 +8,12 @@ Esta migración **transforma** los datos del sistema antiguo al esquema nuevo (n
 > - busca al administrador con `'administrador' = any(roles)`, porque desde el cambio a roles múltiples `profiles.rol` ya no existe;
 > - al final llena el catálogo `sectores` con los sectores de los hogares migrados (en una base nueva queda vacío, porque la migración de sectores corre antes de que existan hogares).
 >
-> Se probó completo, dentro de una transacción con `rollback`, contra el esquema con las 70 migraciones aplicadas. Para una carga desde cero en producción, ver la sección siguiente.
+> Se probó completo, dentro de una transacción con `rollback`, contra el esquema con las migraciones aplicadas (70 en esa fecha). Para una carga desde cero en producción, ver la sección siguiente.
 
 ## Carga desde cero en producción (proyecto Supabase nuevo)
 
 1. **Respaldo** del proyecto actual (Dashboard → Database → Backups, o `pg_dump`). Se recomienda un proyecto nuevo en vez de resetear el actual, para conservarlo como respaldo hasta validar.
-2. **Migraciones:** `npx supabase link --project-ref <ref>` y `npx supabase db push` desde la raíz del repo. Aplica las 70 migraciones (esquema, bucket privado de documentos, tipos de ayuda, productos, origen de rutas). La columna `origen` ya viene en `20260810000003_add_origen_solicitudes.sql`, así que el Paso 0 de abajo no hace falta.
+2. **Migraciones:** `npx supabase link --project-ref <ref>` y `npx supabase db push` desde la raíz del repo. Aplica las 73 migraciones (esquema, bucket privado de documentos, tipos de ayuda, productos, origen de rutas, modalidad de entrega). La columna `origen` ya viene en `20260810000003_add_origen_solicitudes.sql`, así que el Paso 0 de abajo no hace falta.
 3. **Auth (Dashboard):** Site URL y Redirect URLs con el dominio real; desactivar el registro público de usuarios.
 4. **Primer administrador:** crear en Auth → Users el usuario `llucerob@gmail.com`; el trigger `bootstrap_admin` le asigna el rol de administrador. Es requisito del paso 5.
 5. **Datos:** `psql "<connection string, modo session>" -f 01_migracion_datos.sql` desde esta carpeta (o `node run_migracion.mjs "<connection string>" 01_migracion_datos.sql`). En una base limpia los conteos del final deben ser exactos: 1667 hogares, 1883 personas, 13399 solicitudes migradas, 12100 entregas, 4649 hitos.

@@ -657,3 +657,4 @@ Al terminar este backlog MVP, el sistema permitirá, además de todo lo ya cubie
   - Con una entrega a domicilio pendiente se indica que la marca como entregada el funcionario de terreno asignado, desde "Mis entregas"; el administrador tiene además un botón para registrar el resultado.
   - El botón de la entrega en local dice "Marcar como entregada".
 - **Terreno.** Si a una entrega asignada le falta la salida de stock, "Mis entregas" lo avisa y no ofrece "Marcar como realizada" hasta que bodega la registre.
+- **Excepción: datos migrados.** La regla no aplica a solicitudes con `origen = 'migracion'`: el sistema anterior no llevaba inventario y la carga histórica inserta unas 12.100 entregas realizadas sin salida de stock (migración `20261028000003`).
