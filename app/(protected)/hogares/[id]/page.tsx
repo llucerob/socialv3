@@ -13,6 +13,7 @@ import { listarInformesSocialesDeHogar, ROLES_VER_INFORMES, ROLES_REGISTRAR_INFO
 import { NIVEL_CONFIDENCIALIDAD_LABELS } from '@/lib/informes-sociales/types'
 import { listarDocumentosDeHogar } from '@/lib/documentos/dal'
 import { listarEntregasRealizadasDeHogar } from '@/lib/entregas/dal'
+import { MODALIDAD_ENTREGA_LABELS } from '@/lib/entregas/types'
 import { subirDocumentoHogar, actualizarRetencionDocumento, eliminarDocumento } from '@/lib/documentos/actions'
 import { TIPOS_DOCUMENTO, type TipoDocumento } from '@/lib/documentos/types'
 import { DocumentoUploadForm } from '../../documento-upload-form'
@@ -410,6 +411,10 @@ export default async function FichaGrupoFamiliarPage({
                         {entrega.persona_nombre && (
                           <span className="ml-2 text-sm text-text-muted">{entrega.persona_nombre}</span>
                         )}
+                        {/* MR-06 */}
+                        <span className="ml-2 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-800">
+                          {MODALIDAD_ENTREGA_LABELS[entrega.modalidad]}
+                        </span>
                         <span className="mt-1 block text-sm text-text-muted">
                           Recibió: {entrega.receptor_nombre ?? '—'}
                           {entrega.receptor_relacion && ` (${entrega.receptor_relacion})`}

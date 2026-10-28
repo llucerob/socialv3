@@ -630,3 +630,17 @@ Al terminar este backlog MVP, el sistema permitirá, además de todo lo ya cubie
 - Los permisos del rol no cambian: lo que podía hacer un evaluador social lo puede hacer un gestor social, y los usuarios que ya tenían el rol lo conservan sin reasignarlo.
 - **Decisión técnica:** solo cambia el nombre visible (`ROL_LABELS` en `lib/auth/types.ts`). El valor interno `evaluador_social` se mantiene en la base (enum `rol_usuario`, políticas RLS, funciones SQL, historiales y auditoría), porque renombrarlo exigiría reescribir todas esas políticas sin ningún cambio para el usuario. En la auditoría los cambios de roles se siguen registrando con el valor interno, igual que los demás roles.
 - La actividad "evaluación social" de una solicitud conserva su nombre: es lo que hace el rol, no el nombre del rol.
+
+### MR-06 ✅ — Dos modalidades de entrega: en local y a domicilio
+**Relacionada con:** US-12.01–12.05, US-03.04, US-06.02, US-11.03, US-13.01. Maestro §11 y §32–34 ("modalidad local/domicilio").
+**Pedido:** registrar una entrega es confuso: hoy toda entrega se trata como entrega a domicilio. Para cajas de mercadería y pañales existen dos modalidades: **entrega en local**, en que el mismo gestor social (o el encargado de logística) entrega la ayuda en el Departamento Social, y **entrega a domicilio** para los hogares que lo requieren. No todas las entregas son a domicilio.
+**Criterios de aceptación:**
+- Cada entrega tiene una modalidad visible: "En local" o "A domicilio". Las entregas existentes quedan como "A domicilio", porque pasaron por ese flujo.
+- El catálogo define por tipo de ayuda si **permite entrega en local** (nueva regla, editable por el administrador y auditada como las demás). Quedan habilitadas Caja de mercadería y Pañales de adulto; Materiales de construcción no, porque el maestro (§13) la define como exclusivamente a domicilio.
+- En el detalle de una solicitud aprobada, la sección "Entrega" ofrece las dos opciones por separado y con su explicación:
+  - **Entrega en local** (gestor social, bodega/logística o administrador): se registra en un solo paso, en el momento, con quién recibe, su relación con el beneficiario, la fecha y hora (por defecto ahora), una observación y la evidencia fotográfica si el tipo de ayuda la exige. Queda como entrega realizada, con quien la registró como responsable, y la solicitud pasa a "entregada".
+  - **Entrega a domicilio** (bodega/logística o administrador): el flujo de siempre (programar fecha, asignar a terreno, registrar resultado, reprogramar si falla).
+- Si una entrega a domicilio sigue pendiente o falló y la persona viene a retirar la ayuda, se puede registrar como entrega en local: la misma entrega cambia de modalidad y queda realizada, con el cambio en su historial.
+- Las entregas en local no aparecen en "Mis entregas", "Rutas" ni en la caché offline de terreno. Sí aparecen en el listado de entregas, el historial del hogar ("Ayudas entregadas") y el detalle de la solicitud, con su modalidad.
+- La salida de stock sigue siendo un paso aparte de bodega (US-11.03), igual que en la entrega a domicilio.
+- La regla se valida en la base (función `registrar_entrega_local`), no solo en la pantalla: rol, solicitud aprobada, tipo de ayuda que permite entrega en local y entrega no realizada todavía.

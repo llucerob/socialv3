@@ -6,6 +6,15 @@ export const ESTADO_ENTREGA_LABELS: Record<EstadoEntrega, string> = {
   fallida: 'Fallida',
 }
 
+// MR-06: en local, la persona retira la ayuda en el Departamento Social y
+// se registra en el momento; a domicilio, bodega programa y terreno entrega.
+export type ModalidadEntrega = 'domicilio' | 'local'
+
+export const MODALIDAD_ENTREGA_LABELS: Record<ModalidadEntrega, string> = {
+  domicilio: 'A domicilio',
+  local: 'En local',
+}
+
 // US-19.03: los motivos de entrega fallida dejaron de ser un enum fijo —
 // ahora son un catálogo administrable (lib/motivos-entrega), y motivo_fallo
 // pasó a ser el uuid de la fila de motivos_entrega_fallida (antes, el valor
@@ -16,6 +25,7 @@ export type Entrega = {
   id: string
   solicitud_id: string
   estado: EstadoEntrega
+  modalidad: ModalidadEntrega
   fecha_programada: string | null
   responsable_id: string | null
   responsable_nombre: string | null
@@ -84,6 +94,7 @@ export type EntregaRealizadaDeHogar = {
   solicitud_id: string
   tipo_ayuda_nombre: string
   persona_nombre: string | null
+  modalidad: ModalidadEntrega
   fecha_hora_entrega: string | null
   receptor_nombre: string | null
   receptor_relacion: string | null
@@ -94,6 +105,7 @@ export type EntregaRealizadaDeHogar = {
 export type EntregaLecturaSolicitud = {
   entrega_id: string
   estado: EstadoEntrega
+  modalidad: ModalidadEntrega
   fecha_programada: string | null
   responsable_nombre: string | null
   fecha_hora_entrega: string | null

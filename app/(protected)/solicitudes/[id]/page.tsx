@@ -55,8 +55,8 @@ import {
   listarFuncionariosTerreno,
   obtenerHistorialEntrega,
 } from '@/lib/entregas/dal'
-import { crearEntrega, asignarResponsable, reprogramarEntrega } from '@/lib/entregas/actions'
-import { ESTADO_ENTREGA_LABELS } from '@/lib/entregas/types'
+import { crearEntrega, asignarResponsable, reprogramarEntrega, registrarEntregaLocal } from '@/lib/entregas/actions'
+import { ESTADO_ENTREGA_LABELS, MODALIDAD_ENTREGA_LABELS } from '@/lib/entregas/types'
 import { DocumentoUploadForm } from '../../documento-upload-form'
 import { DocumentosSection } from '../../documentos-section'
 import { EnviarEvaluacionButton } from '../enviar-evaluacion-button'
@@ -67,6 +67,7 @@ import { AprobarForm } from '../aprobar-form'
 import { RechazarForm } from '../rechazar-form'
 import { SalidaStockForm } from '../salida-stock-form'
 import { EntregaAsignacionForm } from '../entrega-asignacion-form'
+import { EntregaLocalForm } from '../entrega-local-form'
 import { Card } from '@/components/ui/Card'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
@@ -94,6 +95,9 @@ const ROLES_VER_SENSIBLE: RolUsuario[] = ['administrador', 'evaluador_social', '
 const ROLES_STOCK: RolUsuario[] = ['administrador', 'bodega_logistica']
 // US-12.01/US-12.02: "como bodega o logística" crea y asigna entregas.
 const ROLES_LOGISTICA: RolUsuario[] = ['administrador', 'bodega_logistica']
+// MR-06: la entrega en local la registra quien atiende en el Departamento
+// Social (gestor social o bodega); ver registrar_entrega_local().
+const ROLES_ENTREGA_LOCAL: RolUsuario[] = ['administrador', 'evaluador_social', 'bodega_logistica']
 // US-14.04: "solo finanzas o administrador puede registrar pago".
 const ROLES_FINANZAS: RolUsuario[] = ['administrador', 'finanzas']
 // US-14.02: "como finanzas o evaluador autorizado" valida documentos de reembolso.
@@ -124,6 +128,43 @@ const ESTADOS_ANULABLES: EstadoSolicitud[] = ['borrador', 'ingresada', 'en_evalu
 // cuando falla por falta de stock, y bodega debe poder reintentar desde ahí.
 const ESTADOS_CON_SALIDA_STOCK: EstadoSolicitud[] = ['aprobada', 'aprobada_excepcion', 'pendiente_stock']
 const ESTADOS_CON_ENTREGA: EstadoSolicitud[] = ['aprobada', 'aprobada_excepcion']
+
+type EntregaLocalAction = Parameters<typeof EntregaLocalForm>[0]['action']
+
+// MR-06: las dos modalidades se muestran como opciones separadas, cada una
+// con lo que significa, para que no se confunda "registrar la entrega" con
+// "programar un despacho".
+function OpcionEntregaLocal({ action, requiereEvidencia }: { action: EntregaLocalAction; requiereEvidencia: boolean }) {
+  return (
+    <Card header={<h3 className="font-medium text-text-primary">Entrega en local</h3>}>
+      <p className="mb-4 text-sm text-text-muted">
+        La persona retira la ayuda en el Departamento Social. Se registra ahora, en un solo paso, y la
+        solicitud queda entregada.
+      </p>
+      <EntregaLocalForm action={action} requiereEvidencia={requiereEvidencia} />
+    </Card>
+  )
+}
+
+// Entrega a domicilio pendiente o fallida, pero la persona vino a retirarla.
+function PasarAEntregaLocal({ action, requiereEvidencia }: { action: EntregaLocalAction; requiereEvidencia: boolean }) {
+  return (
+    <details className="rounded-xl border border-border bg-surface px-4 py-3">
+      <summary className="cursor-pointer text-sm font-medium text-brand-800">
+        ¿La persona vino a retirarla? Registrar como entrega en local
+      </summary>
+      <p className="mt-2 mb-4 text-sm text-text-muted">
+        La entrega a domicilio se reemplaza por una entrega en local realizada ahora; el cambio queda en el
+        historial de la entrega.
+      </p>
+      <EntregaLocalForm
+        action={action}
+        requiereEvidencia={requiereEvidencia}
+        submitLabel="Registrar como entrega en local"
+      />
+    </details>
+  )
+}
 
 export default async function DetalleSolicitudPage({
   params,
@@ -285,6 +326,16 @@ export default async function DetalleSolicitudPage({
       ? await obtenerEntregaLecturaDeSolicitud(id)
       : null
   const asignarResponsableConId = entrega ? asignarResponsable.bind(null, entrega.id) : undefined
+  // MR-06: entrega en local, para gestor social y bodega. Se ofrece mientras
+  // la solicitud está aprobada y su entrega no está realizada.
+  const estadoEntrega = entrega?.estado ?? entregaLectura?.estado ?? null
+  const ofrecerEntregaLocal =
+    tieneRol(profile, ROLES_ENTREGA_LOCAL) &&
+    Boolean(tipoAyuda?.requiere_entrega && tipoAyuda.permite_entrega_local) &&
+    ESTADOS_CON_ENTREGA.includes(solicitud.estado) &&
+    estadoEntrega !== 'realizada'
+  const registrarEntregaLocalConId = registrarEntregaLocal.bind(null, id)
+  const requiereEvidencia = tipoAyuda?.requiere_evidencia ?? false
   const reprogramarEntregaConId = entrega ? reprogramarEntrega.bind(null, entrega.id) : undefined
 
   const volverAEvaluacionConId = volverAEvaluacion.bind(null, id)
@@ -420,14 +471,27 @@ export default async function DetalleSolicitudPage({
         <section className="space-y-3">
           <h2 className="font-medium text-text-primary">Entrega</h2>
 
-          {!entrega && puedeCrearEntrega && (
-            <EntregaAsignacionForm
-              action={crearEntregaConId}
-              funcionarios={funcionariosTerreno}
-              submitLabel="Crear entrega"
-            />
+          {!entrega && (puedeCrearEntrega || ofrecerEntregaLocal) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {ofrecerEntregaLocal && (
+                <OpcionEntregaLocal action={registrarEntregaLocalConId} requiereEvidencia={requiereEvidencia} />
+              )}
+              {puedeCrearEntrega && (
+                <Card header={<h3 className="font-medium text-text-primary">Entrega a domicilio</h3>}>
+                  <p className="mb-4 text-sm text-text-muted">
+                    Se programa una fecha y se asigna a un funcionario de terreno, que registra el resultado
+                    al entregarla en el domicilio.
+                  </p>
+                  <EntregaAsignacionForm
+                    action={crearEntregaConId}
+                    funcionarios={funcionariosTerreno}
+                    submitLabel="Programar entrega a domicilio"
+                  />
+                </Card>
+              )}
+            </div>
           )}
-          {!entrega && !puedeCrearEntrega && (
+          {!entrega && !puedeCrearEntrega && !ofrecerEntregaLocal && (
             <p className="text-sm text-text-muted">
               La solicitud debe estar aprobada para generar una entrega.
             </p>
@@ -436,9 +500,13 @@ export default async function DetalleSolicitudPage({
           {entrega && (
             <div className="space-y-3">
               <p className="text-sm text-text-primary">
-                Estado: <span className="font-medium">{ESTADO_ENTREGA_LABELS[entrega.estado]}</span>
-                {entrega.fecha_programada && ` · programada ${formatearFecha(entrega.fecha_programada)}`}
-                {' · responsable: '}
+                <span className="font-medium">{MODALIDAD_ENTREGA_LABELS[entrega.modalidad]}</span>
+                {' · Estado: '}
+                <span className="font-medium">{ESTADO_ENTREGA_LABELS[entrega.estado]}</span>
+                {entrega.modalidad === 'domicilio' &&
+                  entrega.fecha_programada &&
+                  ` · programada ${formatearFecha(entrega.fecha_programada)}`}
+                {entrega.modalidad === 'local' ? ' · entregó: ' : ' · responsable: '}
                 {entrega.responsable_nombre ?? 'sin asignar'}
               </p>
 
@@ -466,6 +534,10 @@ export default async function DetalleSolicitudPage({
                     />
                   )}
                 </div>
+              )}
+
+              {ofrecerEntregaLocal && (
+                <PasarAEntregaLocal action={registrarEntregaLocalConId} requiereEvidencia={requiereEvidencia} />
               )}
 
               {entrega.estado === 'realizada' && (
@@ -509,14 +581,25 @@ export default async function DetalleSolicitudPage({
         <section className="space-y-3">
           <h2 className="font-medium text-text-primary">Entrega</h2>
 
-          {!entregaLectura ? (
+          {!entregaLectura && ofrecerEntregaLocal && (
+            <div className="space-y-2">
+              <OpcionEntregaLocal action={registrarEntregaLocalConId} requiereEvidencia={requiereEvidencia} />
+              <p className="text-sm text-text-muted">La entrega a domicilio la programa bodega/logística.</p>
+            </div>
+          )}
+          {!entregaLectura && !ofrecerEntregaLocal && (
             <p className="text-sm text-text-muted">Sin entrega generada todavía.</p>
-          ) : (
+          )}
+          {entregaLectura && (
             <div className="space-y-3">
               <p className="text-sm text-text-primary">
-                Estado: <span className="font-medium">{ESTADO_ENTREGA_LABELS[entregaLectura.estado]}</span>
-                {entregaLectura.fecha_programada && ` · programada ${formatearFecha(entregaLectura.fecha_programada)}`}
-                {' · responsable: '}
+                <span className="font-medium">{MODALIDAD_ENTREGA_LABELS[entregaLectura.modalidad]}</span>
+                {' · Estado: '}
+                <span className="font-medium">{ESTADO_ENTREGA_LABELS[entregaLectura.estado]}</span>
+                {entregaLectura.modalidad === 'domicilio' &&
+                  entregaLectura.fecha_programada &&
+                  ` · programada ${formatearFecha(entregaLectura.fecha_programada)}`}
+                {entregaLectura.modalidad === 'local' ? ' · entregó: ' : ' · responsable: '}
                 {entregaLectura.responsable_nombre ?? 'sin asignar'}
               </p>
 

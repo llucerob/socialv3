@@ -13,6 +13,8 @@ type TipoAyudaFormAction = (
 const REGLAS: { name: keyof TipoAyuda; label: string }[] = [
   { name: 'requiere_aprobacion', label: 'Requiere aprobación' },
   { name: 'requiere_entrega', label: 'Requiere entrega' },
+  // MR-06
+  { name: 'permite_entrega_local', label: 'Permite entrega en local (además de a domicilio)' },
   { name: 'requiere_evidencia', label: 'Requiere evidencia' },
   { name: 'requiere_persona_beneficiaria', label: 'Requiere persona beneficiaria' },
   { name: 'requiere_documentos', label: 'Requiere documentos' },

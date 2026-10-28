@@ -11,6 +11,8 @@ import { tieneRol } from '@/lib/auth/roles'
 const REGLAS: { campo: keyof TipoAyuda; label: string }[] = [
   { campo: 'requiere_aprobacion', label: 'Requiere aprobación' },
   { campo: 'requiere_entrega', label: 'Requiere entrega' },
+  // MR-06
+  { campo: 'permite_entrega_local', label: 'Permite entrega en local' },
   { campo: 'requiere_evidencia', label: 'Requiere evidencia' },
   { campo: 'requiere_persona_beneficiaria', label: 'Requiere persona beneficiaria' },
   { campo: 'requiere_documentos', label: 'Requiere documentos' },

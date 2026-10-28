@@ -18,6 +18,7 @@ type ValoresTipoAyudaFormulario = {
   requiere_evidencia: boolean
   requiere_persona_beneficiaria: boolean
   requiere_documentos: boolean
+  permite_entrega_local: boolean
   tiene_tope_monetario: boolean
   tope_monetario: number | null
   periodicidad: string | null
@@ -41,6 +42,7 @@ function leerCampos(formData: FormData): ValoresTipoAyudaFormulario {
     requiere_evidencia: formData.get('requiere_evidencia') === 'on',
     requiere_persona_beneficiaria: formData.get('requiere_persona_beneficiaria') === 'on',
     requiere_documentos: formData.get('requiere_documentos') === 'on',
+    permite_entrega_local: formData.get('permite_entrega_local') === 'on',
     tiene_tope_monetario: tieneTope,
     tope_monetario: tope,
     periodicidad: formData.get('periodicidad')?.toString().trim() || null,
@@ -73,6 +75,8 @@ function datosParaGuardar(campos: ValoresTipoAyudaFormulario) {
     requiere_evidencia: campos.requiere_evidencia,
     requiere_persona_beneficiaria: campos.requiere_persona_beneficiaria,
     requiere_documentos: campos.requiere_documentos,
+    // MR-06: sin entrega física no hay entrega en local.
+    permite_entrega_local: campos.requiere_entrega && campos.permite_entrega_local,
     tiene_tope_monetario: campos.tiene_tope_monetario,
     tope_monetario: campos.tiene_tope_monetario ? campos.tope_monetario : null,
     periodicidad: campos.periodicidad,

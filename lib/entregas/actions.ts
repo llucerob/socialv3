@@ -18,6 +18,9 @@ const ROLES_LOGISTICA = ['administrador', 'bodega_logistica'] as const
 const ROLES_TERRENO = ['administrador', 'terreno_repartidor'] as const
 
 const ESTADOS_SOLICITUD_PARA_ENTREGA = ['aprobada', 'aprobada_excepcion']
+// MR-06: la entrega en local la registra quien atiende en el Departamento
+// Social: el gestor social o bodega/logística (y el administrador).
+const ROLES_ENTREGA_LOCAL = ['administrador', 'evaluador_social', 'bodega_logistica'] as const
 
 type ValoresCrearEntregaFormulario = { fecha_programada: string; responsable_id: string }
 
@@ -58,6 +61,7 @@ export async function crearEntrega(
   const supabase = await createClient()
   const { error } = await supabase.from('entregas').insert({
     solicitud_id: solicitudId,
+    modalidad: 'domicilio',
     fecha_programada: valores.fecha_programada || null,
     responsable_id: valores.responsable_id || null,
   })
@@ -339,4 +343,94 @@ export async function registrarEntregaFallida(
   revalidatePath(`/mis-entregas/${entregaId}`)
   revalidatePath('/mis-entregas')
   revalidatePath(`/solicitudes/${entrega.solicitud_id}`)
+}
+
+type ValoresEntregaLocalFormulario = {
+  fecha_hora: string
+  receptor_nombre: string
+  receptor_relacion: string
+  observacion: string
+}
+
+export type EntregaLocalFormState =
+  | { error?: string; valores: ValoresEntregaLocalFormulario }
+  | undefined
+
+const ERRORES_ENTREGA_LOCAL: Record<string, string> = {
+  RECEPTOR_OBLIGATORIO: 'El nombre de quien recibe es obligatorio.',
+  SOLICITUD_NO_ENCONTRADA: 'Solicitud no encontrada.',
+  SOLICITUD_NO_APROBADA: 'Solo se puede entregar una solicitud aprobada.',
+  NO_PERMITE_ENTREGA_LOCAL: 'Este tipo de ayuda no permite entrega en local.',
+  ENTREGA_YA_REALIZADA: 'Esta solicitud ya tiene una entrega realizada.',
+}
+
+// MR-06: entrega en local, en un solo paso. Las reglas (rol, solicitud
+// aprobada, tipo de ayuda que permite entrega en local, entrega no realizada)
+// las valida registrar_entrega_local() en la base; aquí se revisan antes
+// solo para no subir la evidencia de una entrega que se va a rechazar. Si
+// había una entrega a domicilio pendiente o fallida, la misma entrega pasa
+// a "en local" (la persona vino a retirarla).
+export async function registrarEntregaLocal(
+  solicitudId: string,
+  _prevState: EntregaLocalFormState,
+  formData: FormData
+): Promise<EntregaLocalFormState> {
+  await requireRole([...ROLES_ENTREGA_LOCAL])
+
+  const valores: ValoresEntregaLocalFormulario = {
+    fecha_hora: formData.get('fecha_hora')?.toString().trim() ?? '',
+    receptor_nombre: formData.get('receptor_nombre')?.toString().trim() ?? '',
+    receptor_relacion: formData.get('receptor_relacion')?.toString().trim() ?? '',
+    observacion: formData.get('observacion')?.toString().trim() ?? '',
+  }
+
+  if (!valores.receptor_nombre) {
+    return { error: ERRORES_ENTREGA_LOCAL.RECEPTOR_OBLIGATORIO, valores }
+  }
+
+  const solicitud = await obtenerSolicitud(solicitudId)
+  if (!solicitud) {
+    return { error: ERRORES_ENTREGA_LOCAL.SOLICITUD_NO_ENCONTRADA, valores }
+  }
+  if (!ESTADOS_SOLICITUD_PARA_ENTREGA.includes(solicitud.estado)) {
+    return { error: ERRORES_ENTREGA_LOCAL.SOLICITUD_NO_APROBADA, valores }
+  }
+  const tipoAyuda = await obtenerTipoAyuda(solicitud.tipo_ayuda_id)
+  if (!tipoAyuda?.requiere_entrega || !tipoAyuda.permite_entrega_local) {
+    return { error: ERRORES_ENTREGA_LOCAL.NO_PERMITE_ENTREGA_LOCAL, valores }
+  }
+
+  // Misma regla de evidencia que la entrega a domicilio (US-12.04).
+  const archivo = formData.get('archivo')
+  const tieneArchivo = archivo instanceof File && archivo.size > 0
+  if (tipoAyuda.requiere_evidencia && !tieneArchivo) {
+    const documentosExistentes = await listarDocumentosDeSolicitud(solicitudId)
+    if (!documentosExistentes.some((d) => d.tipo_documento === 'fotografia')) {
+      return { error: 'Esta ayuda requiere adjuntar evidencia fotográfica.', valores }
+    }
+  }
+  if (tieneArchivo) {
+    const resultadoSubida = await subirDocumentoSolicitud(solicitudId, undefined, formData)
+    if (resultadoSubida?.error) {
+      return { error: resultadoSubida.error, valores }
+    }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('registrar_entrega_local', {
+    p_solicitud_id: solicitudId,
+    p_fecha_hora: valores.fecha_hora ? new Date(valores.fecha_hora).toISOString() : null,
+    p_receptor_nombre: valores.receptor_nombre,
+    p_receptor_relacion: valores.receptor_relacion,
+    p_observacion: valores.observacion,
+  })
+
+  if (error) {
+    const codigo = Object.keys(ERRORES_ENTREGA_LOCAL).find((clave) => error.message?.includes(clave))
+    return { error: codigo ? ERRORES_ENTREGA_LOCAL[codigo] : 'No se pudo registrar la entrega.', valores }
+  }
+
+  revalidatePath(`/solicitudes/${solicitudId}`)
+  revalidatePath(`/hogares/${solicitud.grupo_familiar_id}`)
+  revalidatePath('/entregas')
 }

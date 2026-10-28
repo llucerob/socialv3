@@ -97,6 +97,9 @@ export async function listarMisEntregas(
   let consulta = supabase
     .from('entregas')
     .select(SELECT_CON_CONTEXTO)
+    // MR-06: una entrega en local se registra ya realizada en el
+    // Departamento Social; no es parte del trabajo de terreno.
+    .eq('modalidad', 'domicilio')
     .order('fecha_programada', { ascending: true, nullsFirst: false })
   if (!verEntregasDeTodos) {
     consulta = consulta.eq('responsable_id', usuarioId)

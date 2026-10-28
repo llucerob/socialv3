@@ -12,6 +12,7 @@ import { FiltrosBar, CampoFiltro } from '@/components/ui/FiltrosBar'
 import { ParadaRuta } from '@/components/ui/ParadaRuta'
 import { GeorreferenciacionBadge } from '../hogares/georreferenciacion-badge'
 import { formatearFecha } from '@/lib/fechas'
+import { MODALIDAD_ENTREGA_LABELS } from '@/lib/entregas/types'
 import { tieneRol } from '@/lib/auth/roles'
 
 const ROLES_LOGISTICA = ['administrador', 'bodega_logistica'] as const
@@ -66,7 +67,7 @@ export default async function EntregasPage({
 
       {entregas.length === 0 ? (
         <p className="text-sm text-text-muted">
-          Sin entregas para este filtro. Se crean desde una solicitud aprobada.
+          Sin entregas para este filtro. Se registran desde una solicitud aprobada (en local o a domicilio).
         </p>
       ) : (
         <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
@@ -74,6 +75,10 @@ export default async function EntregasPage({
             <li key={entrega.id} className="flex items-center justify-between gap-3 px-4 py-3">
               <Link href={`/solicitudes/${entrega.solicitud_id}`} className="min-w-0 flex-1 hover:underline">
                 <span className="font-medium text-text-primary">{entrega.tipo_ayuda_nombre}</span>
+                {/* MR-06 */}
+                <span className="ml-2 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-800">
+                  {MODALIDAD_ENTREGA_LABELS[entrega.modalidad]}
+                </span>
                 <span className="ml-2 text-sm text-text-muted">
                   {entrega.grupo_familiar_direccion}
                   {entrega.persona_nombre ? ` · ${entrega.persona_nombre}` : ''}
@@ -82,14 +87,16 @@ export default async function EntregasPage({
                   {entrega.responsable_nombre ?? 'sin asignar'}
                 </span>
               </Link>
-              <a
-                href={enlaceMapa(entrega)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 text-sm text-brand-600 hover:underline"
-              >
-                Mapa
-              </a>
+              {entrega.modalidad === 'domicilio' && (
+                <a
+                  href={enlaceMapa(entrega)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-sm text-brand-600 hover:underline"
+                >
+                  Mapa
+                </a>
+              )}
               <EstadoBadge estado={entrega.estado} />
             </li>
           ))}
