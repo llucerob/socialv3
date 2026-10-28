@@ -40,7 +40,7 @@
 | Rol | Qué habilita |
 |---|---|
 | Administrador | Todo el sistema: catálogos, usuarios, incidentes y cualquier acción de los demás roles. |
-| Evaluador social | Hogares, integrantes y solicitudes; evaluación social, hitos e informes sociales. |
+| Gestor social (antes "Evaluador social", ver MR-05) | Hogares, integrantes y solicitudes; evaluación social, hitos e informes sociales. |
 | Aprobador | Aprueba y rechaza solicitudes (incluida la excepción RSH); lee evaluaciones, hitos e informes. |
 | Bodega / logística | Inventario, proveedores, compras y gestión de entregas. |
 | Terreno / repartidor | Sus entregas asignadas y rutas, con registro del resultado (también offline). |
@@ -621,3 +621,12 @@ Al terminar este backlog MVP, el sistema permitirá, además de todo lo ya cubie
 - La pestaña activa queda en la URL (`?tab=`), así se puede enlazar, recargar y volver atrás. Los filtros de hitos y de documentos se mantienen en su pestaña, y al registrar un integrante, hito o informe se vuelve a la pestaña correspondiente.
 - En móvil la barra de pestañas se desplaza horizontalmente sin generar scroll horizontal en la página.
 - No cambian consultas, permisos ni acciones existentes.
+
+### MR-05 ✅ — El rol "Evaluador social" pasa a llamarse "Gestor social"
+**Relacionada con:** US-01.03, US-19.01.
+**Pedido:** el rol evaluador social debe renombrarse a "Gestor social".
+**Criterios de aceptación:**
+- En toda la interfaz el rol se muestra como "Gestor social": barra superior, listado y ficha de usuarios, casillas de roles al crear o editar un usuario, página "sin permiso" y los avisos de información sensible de hitos e informes sociales.
+- Los permisos del rol no cambian: lo que podía hacer un evaluador social lo puede hacer un gestor social, y los usuarios que ya tenían el rol lo conservan sin reasignarlo.
+- **Decisión técnica:** solo cambia el nombre visible (`ROL_LABELS` en `lib/auth/types.ts`). El valor interno `evaluador_social` se mantiene en la base (enum `rol_usuario`, políticas RLS, funciones SQL, historiales y auditoría), porque renombrarlo exigiría reescribir todas esas políticas sin ningún cambio para el usuario. En la auditoría los cambios de roles se siguen registrando con el valor interno, igual que los demás roles.
+- La actividad "evaluación social" de una solicitud conserva su nombre: es lo que hace el rol, no el nombre del rol.

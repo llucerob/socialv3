@@ -39,7 +39,7 @@ export default async function NuevoInformeSocialPage({
       </div>
 
       <BannerSensible>
-        Información sensible — visible solo para evaluador social, aprobador y administrador.
+        Información sensible — visible solo para gestor social, aprobador y administrador.
       </BannerSensible>
 
       <InformeSocialForm

@@ -26,7 +26,7 @@ export default async function NuevoHitoPage({ params }: { params: Promise<{ id: 
       </div>
 
       <BannerSensible>
-        Información sensible — visible solo para evaluador social, aprobador y administrador.
+        Información sensible — visible solo para gestor social, aprobador y administrador.
       </BannerSensible>
 
       <HitoForm action={registrarConHogar} integrantes={integrantes} />

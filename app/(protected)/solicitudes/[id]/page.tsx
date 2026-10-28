@@ -632,7 +632,7 @@ export default async function DetalleSolicitudPage({
         <section>
           <h2 className="font-medium text-text-primary">Evaluación social</h2>
           <BannerSensible>
-            Información sensible — visible solo para evaluador social, aprobador y administrador.
+            Información sensible — visible solo para gestor social, aprobador y administrador.
           </BannerSensible>
 
           {evaluaciones.length === 0 ? (

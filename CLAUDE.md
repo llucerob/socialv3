@@ -42,6 +42,7 @@ Al completar una historia, márcala en `docs/backlog.md` agregando `✅` junto a
 - **EPIC 27 (offline PWA de terreno):** usar el plugin `next-pwa` en vez de escribir el service worker a mano. Alcance acotado: solo cortes momentáneos de señal durante la jornada, no trabajo multi-día offline.
 - **US-13.04 (ruteo por cercanía):** usar `@turf/turf` para cálculo de distancia (haversine) + heurística greedy de vecino más cercano, ejecutado en el servidor (API route), no en el cliente. No usar servicios externos de ruteo por calles en esta iteración.
 - **Roles múltiples por usuario (2026-10-27):** un usuario puede tener varios roles (`profiles.roles`, lista; el administrador los asigna en `/admin/usuarios/[id]`). Un permiso se concede si el usuario tiene alguno de los roles que lo habilitan: en SQL `public.tiene_rol(array[...]::rol_usuario[])` / `tiene_algun_rol()`, en la app `tieneRol(profile, ROLES_X)` de `lib/auth/roles.ts`. No existen `current_role()` ni `profiles.rol`. Si una misma persona evalúa y decide una solicitud se permite, pero queda marcado (`decisiones_solicitud.decidida_por_quien_evaluo`).
+- **Nombre del rol `evaluador_social` (MR-05, 2026-10-27):** en la interfaz se llama "Gestor social". El valor interno `evaluador_social` no se renombra (enum, RLS, funciones SQL e historiales lo usan); cambiar solo `ROL_LABELS`.
 
 ## Comandos (completar una vez configurado el proyecto)
 

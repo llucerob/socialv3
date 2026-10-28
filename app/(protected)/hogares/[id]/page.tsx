@@ -443,7 +443,7 @@ export default async function FichaGrupoFamiliarPage({
               </div>
 
               <BannerSensible>
-                Información sensible — visible solo para evaluador social, aprobador y administrador.
+                Información sensible — visible solo para gestor social, aprobador y administrador.
               </BannerSensible>
 
               {/* US-22.02: "se puede filtrar por tipo de hito" — mismo patrón

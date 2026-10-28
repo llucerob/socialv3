@@ -25,7 +25,7 @@ export type ActiveProfile = Profile
 
 export const ROL_LABELS: Record<RolUsuario, string> = {
   administrador: 'Administrador',
-  evaluador_social: 'Evaluador social',
+  evaluador_social: 'Gestor social',
   aprobador: 'Aprobador',
   bodega_logistica: 'Bodega / logística',
   terreno_repartidor: 'Terreno / repartidor',
