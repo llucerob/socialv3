@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { obtenerEntregaAsignadaAlUsuario, aplicarResultadoEntregaSync } from '@/lib/entregas/registro'
 import { obtenerSolicitud } from '@/lib/solicitudes/dal'
 import { obtenerTipoAyuda } from '@/lib/ayudas/dal'
+import { tieneSalidaStock } from '@/lib/inventario/dal'
+import { MENSAJE_SIN_SALIDA_STOCK } from '@/lib/entregas/types'
 import { listarDocumentosDeSolicitud } from '@/lib/documentos/dal'
 import { subirDocumentoSolicitud } from '@/lib/documentos/actions'
 import { tieneRol } from '@/lib/auth/roles'
@@ -40,6 +42,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const entrega = await obtenerEntregaAsignadaAlUsuario(entregaId, profile.id, tieneRol(profile, ['administrador']))
   if (!entrega) {
     return Response.json({ error: 'Entrega no encontrada o no asignada a tu usuario.' }, { status: 404 })
+  }
+
+  // MR-07: antes de subir la evidencia de una entrega que se va a rechazar.
+  if (entrega.estado === 'pendiente' && !(await tieneSalidaStock(entrega.solicitud_id))) {
+    return Response.json({ error: MENSAJE_SIN_SALIDA_STOCK }, { status: 400 })
   }
 
   const solicitud = await obtenerSolicitud(entrega.solicitud_id)

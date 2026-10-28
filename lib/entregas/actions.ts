@@ -10,6 +10,8 @@ import { listarDocumentosDeSolicitud } from '@/lib/documentos/dal'
 import { obtenerMotivoEntregaFallida } from '@/lib/motivos-entrega/dal'
 import { obtenerEntregaAsignadaAlUsuario } from '@/lib/entregas/registro'
 import { tieneRol } from '@/lib/auth/roles'
+import { tieneSalidaStock } from '@/lib/inventario/dal'
+import { ERROR_SIN_SALIDA_STOCK, MENSAJE_SIN_SALIDA_STOCK } from '@/lib/entregas/types'
 
 // US-12.01/US-12.02: "como bodega o logística" crea y asigna entregas.
 const ROLES_LOGISTICA = ['administrador', 'bodega_logistica'] as const
@@ -58,6 +60,11 @@ export async function crearEntrega(
     return { error: 'Este tipo de ayuda no requiere entrega física.', valores }
   }
 
+  // MR-07: también lo exige el trigger; aquí da el mensaje antes de intentar.
+  if (!(await tieneSalidaStock(solicitudId))) {
+    return { error: MENSAJE_SIN_SALIDA_STOCK, valores }
+  }
+
   const supabase = await createClient()
   const { error } = await supabase.from('entregas').insert({
     solicitud_id: solicitudId,
@@ -68,7 +75,12 @@ export async function crearEntrega(
 
   if (error) {
     return {
-      error: error.code === '23505' ? 'Ya existe una entrega para esta solicitud.' : 'No se pudo crear la entrega.',
+      error:
+        error.code === '23505'
+          ? 'Ya existe una entrega para esta solicitud.'
+          : error.message?.includes(ERROR_SIN_SALIDA_STOCK)
+            ? MENSAJE_SIN_SALIDA_STOCK
+            : 'No se pudo crear la entrega.',
       valores,
     }
   }
@@ -232,6 +244,10 @@ export async function registrarEntregaRealizada(
   if (entrega.estado !== 'pendiente') {
     return { error: 'Solo se puede registrar el resultado de una entrega pendiente.', valores }
   }
+  // MR-07: antes de subir la evidencia de una entrega que se va a rechazar.
+  if (!(await tieneSalidaStock(entrega.solicitud_id))) {
+    return { error: MENSAJE_SIN_SALIDA_STOCK, valores }
+  }
 
   const solicitud = await obtenerSolicitud(entrega.solicitud_id)
   const tipoAyuda = solicitud ? await obtenerTipoAyuda(solicitud.tipo_ayuda_id) : null
@@ -275,7 +291,12 @@ export async function registrarEntregaRealizada(
     .eq('id', entregaId)
 
   if (errorUpdate) {
-    return { error: 'No se pudo registrar la entrega.', valores }
+    return {
+      error: errorUpdate.message?.includes(ERROR_SIN_SALIDA_STOCK)
+        ? MENSAJE_SIN_SALIDA_STOCK
+        : 'No se pudo registrar la entrega.',
+      valores,
+    }
   }
 
   await supabase.rpc('marcar_solicitud_entregada', { p_solicitud_id: entrega.solicitud_id })
@@ -362,6 +383,7 @@ const ERRORES_ENTREGA_LOCAL: Record<string, string> = {
   SOLICITUD_NO_APROBADA: 'Solo se puede entregar una solicitud aprobada.',
   NO_PERMITE_ENTREGA_LOCAL: 'Este tipo de ayuda no permite entrega en local.',
   ENTREGA_YA_REALIZADA: 'Esta solicitud ya tiene una entrega realizada.',
+  [ERROR_SIN_SALIDA_STOCK]: MENSAJE_SIN_SALIDA_STOCK,
 }
 
 // MR-06: entrega en local, en un solo paso. Las reglas (rol, solicitud
@@ -398,6 +420,9 @@ export async function registrarEntregaLocal(
   const tipoAyuda = await obtenerTipoAyuda(solicitud.tipo_ayuda_id)
   if (!tipoAyuda?.requiere_entrega || !tipoAyuda.permite_entrega_local) {
     return { error: ERRORES_ENTREGA_LOCAL.NO_PERMITE_ENTREGA_LOCAL, valores }
+  }
+  if (!(await tieneSalidaStock(solicitudId))) {
+    return { error: MENSAJE_SIN_SALIDA_STOCK, valores }
   }
 
   // Misma regla de evidencia que la entrega a domicilio (US-12.04).

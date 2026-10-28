@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireRole } from '@/lib/auth/dal'
@@ -68,6 +69,8 @@ import { RechazarForm } from '../rechazar-form'
 import { SalidaStockForm } from '../salida-stock-form'
 import { EntregaAsignacionForm } from '../entrega-asignacion-form'
 import { EntregaLocalForm } from '../entrega-local-form'
+import { PasosEntrega, type PasoEntrega } from '../pasos-entrega'
+import { tieneSalidaStock } from '@/lib/inventario/dal'
 import { Card } from '@/components/ui/Card'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { EstadoBadge } from '@/components/ui/EstadoBadge'
@@ -128,6 +131,15 @@ const ESTADOS_ANULABLES: EstadoSolicitud[] = ['borrador', 'ingresada', 'en_evalu
 // cuando falla por falta de stock, y bodega debe poder reintentar desde ahí.
 const ESTADOS_CON_SALIDA_STOCK: EstadoSolicitud[] = ['aprobada', 'aprobada_excepcion', 'pendiente_stock']
 const ESTADOS_CON_ENTREGA: EstadoSolicitud[] = ['aprobada', 'aprobada_excepcion']
+// MR-07: la solicitud ya pasó la aprobación (para la guía de pasos de la entrega).
+const ESTADOS_APROBADOS: EstadoSolicitud[] = [
+  'aprobada',
+  'aprobada_excepcion',
+  'pendiente_stock',
+  'asignada_entrega_pago',
+  'entregada_pagada',
+  'cerrada',
+]
 
 type EntregaLocalAction = Parameters<typeof EntregaLocalForm>[0]['action']
 
@@ -160,7 +172,7 @@ function PasarAEntregaLocal({ action, requiereEvidencia }: { action: EntregaLoca
       <EntregaLocalForm
         action={action}
         requiereEvidencia={requiereEvidencia}
-        submitLabel="Registrar como entrega en local"
+        submitLabel="Marcar como entregada en local"
       />
     </details>
   )
@@ -329,11 +341,104 @@ export default async function DetalleSolicitudPage({
   // MR-06: entrega en local, para gestor social y bodega. Se ofrece mientras
   // la solicitud está aprobada y su entrega no está realizada.
   const estadoEntrega = entrega?.estado ?? entregaLectura?.estado ?? null
+  // MR-07: sin salida de stock registrada no se entrega (también lo exige
+  // el trigger entregas_exigir_salida_stock).
+  const requiereEntrega = tipoAyuda?.requiere_entrega ?? false
+  const salidaRegistrada = requiereEntrega ? await tieneSalidaStock(id) : false
   const ofrecerEntregaLocal =
     tieneRol(profile, ROLES_ENTREGA_LOCAL) &&
     Boolean(tipoAyuda?.requiere_entrega && tipoAyuda.permite_entrega_local) &&
     ESTADOS_CON_ENTREGA.includes(solicitud.estado) &&
-    estadoEntrega !== 'realizada'
+    estadoEntrega !== 'realizada' &&
+    salidaRegistrada
+  const programarDomicilio = puedeCrearEntrega && salidaRegistrada
+
+  // MR-07: pasos para completar la ayuda y el próximo paso concreto.
+  const datosEntrega = entrega ?? entregaLectura
+  const entregaId = entrega?.id ?? entregaLectura?.entrega_id ?? null
+  const aprobada = ESTADOS_APROBADOS.includes(solicitud.estado)
+  const entregada = estadoEntrega === 'realizada' || solicitud.estado === 'entregada_pagada'
+  const pasosEntrega: PasoEntrega[] = [
+    {
+      titulo: 'Aprobación',
+      responsable: 'Aprobador',
+      estado: aprobada ? 'hecho' : 'actual',
+    },
+    {
+      titulo: 'Salida de stock',
+      responsable: 'Bodega / logística',
+      // Entregas anteriores a MR-07 pueden no tenerla: se muestra que falta,
+      // no como paso en curso.
+      detalle:
+        solicitud.estado === 'pendiente_stock'
+          ? 'Sin stock suficiente'
+          : entregada && !salidaRegistrada
+            ? 'No registrada'
+            : undefined,
+      estado: salidaRegistrada ? 'hecho' : aprobada && !entregada ? 'actual' : 'pendiente',
+    },
+    {
+      titulo: 'Entrega',
+      responsable: tipoAyuda?.permite_entrega_local
+        ? 'En local (gestor social o bodega) o a domicilio (terreno)'
+        : 'A domicilio (terreno)',
+      detalle: datosEntrega
+        ? `${MODALIDAD_ENTREGA_LABELS[datosEntrega.modalidad]} · ${ESTADO_ENTREGA_LABELS[datosEntrega.estado]}`
+        : undefined,
+      estado: entregada ? 'hecho' : aprobada && salidaRegistrada ? 'actual' : 'pendiente',
+    },
+    {
+      titulo: 'Entregada',
+      responsable: 'La solicitud se cierra como entregada',
+      estado: entregada ? 'hecho' : 'pendiente',
+    },
+  ]
+  const esAdministrador = tieneRol(profile, ['administrador'])
+  let proximoPaso: ReactNode
+  if (entregada) {
+    proximoPaso = datosEntrega?.fecha_hora_entrega
+      ? `ninguno. Ayuda entregada (${MODALIDAD_ENTREGA_LABELS[datosEntrega.modalidad].toLowerCase()}) el ${new Date(datosEntrega.fecha_hora_entrega).toLocaleString('es-CL')}`
+      : 'ninguno. La ayuda ya fue entregada.'
+  } else if (!aprobada) {
+    proximoPaso = 'la solicitud debe aprobarse antes de preparar la entrega.'
+  } else if (solicitud.estado === 'pendiente_stock') {
+    proximoPaso = 'no hay stock suficiente. Bodega debe registrar la salida en la sección «Stock» cuando llegue la mercadería.'
+  } else if (!salidaRegistrada) {
+    proximoPaso = puedeVerStock
+      ? 'registra la salida de stock en la sección «Stock», más arriba. Sin ella no se puede entregar.'
+      : 'bodega debe registrar la salida de stock de esta solicitud. Sin ella no se puede entregar.'
+  } else if (!datosEntrega) {
+    proximoPaso = ofrecerEntregaLocal
+      ? programarDomicilio
+        ? 'si la persona está aquí, usa «Marcar como entregada» (entrega en local). Si hay que llevarla, programa la entrega a domicilio.'
+        : tipoAyuda?.permite_entrega_local
+          ? 'si la persona está aquí, usa «Marcar como entregada» (entrega en local). La entrega a domicilio la programa bodega.'
+          : 'esta ayuda se entrega solo a domicilio; la programa bodega.'
+      : programarDomicilio
+        ? 'programa la entrega a domicilio: fecha y funcionario de terreno.'
+        : 'el gestor social o bodega deben registrar la entrega en local, o bodega programarla a domicilio.'
+  } else if (datosEntrega.estado === 'pendiente') {
+    proximoPaso = datosEntrega.responsable_nombre ? (
+      <>
+        {datosEntrega.responsable_nombre} (terreno) la marca como entregada desde «Mis entregas» al llegar al
+        domicilio.
+        {esAdministrador && entregaId && (
+          <>
+            {' '}
+            <Link href={`/mis-entregas/${entregaId}`} className="font-semibold underline">
+              Registrar el resultado
+            </Link>
+          </>
+        )}
+      </>
+    ) : (
+      'bodega debe asignarle un funcionario de terreno, que la marcará como entregada desde «Mis entregas».'
+    )
+  } else {
+    proximoPaso = ofrecerEntregaLocal
+      ? 'la entrega falló. Bodega debe reprogramarla, o, si la persona viene a retirarla, márcala como entregada en local.'
+      : 'la entrega falló. Bodega debe reprogramarla.'
+  }
   const registrarEntregaLocalConId = registrarEntregaLocal.bind(null, id)
   const requiereEvidencia = tipoAyuda?.requiere_evidencia ?? false
   const reprogramarEntregaConId = entrega ? reprogramarEntrega.bind(null, entrega.id) : undefined
@@ -470,13 +575,14 @@ export default async function DetalleSolicitudPage({
       {puedeGestionarEntregas && (tipoAyuda?.requiere_entrega ?? false) && (
         <section className="space-y-3">
           <h2 className="font-medium text-text-primary">Entrega</h2>
+          <PasosEntrega pasos={pasosEntrega} proximoPaso={proximoPaso} />
 
-          {!entrega && (puedeCrearEntrega || ofrecerEntregaLocal) && (
+          {!entrega && (programarDomicilio || ofrecerEntregaLocal) && (
             <div className="grid gap-4 lg:grid-cols-2">
               {ofrecerEntregaLocal && (
                 <OpcionEntregaLocal action={registrarEntregaLocalConId} requiereEvidencia={requiereEvidencia} />
               )}
-              {puedeCrearEntrega && (
+              {programarDomicilio && (
                 <Card header={<h3 className="font-medium text-text-primary">Entrega a domicilio</h3>}>
                   <p className="mb-4 text-sm text-text-muted">
                     Se programa una fecha y se asigna a un funcionario de terreno, que registra el resultado
@@ -490,11 +596,6 @@ export default async function DetalleSolicitudPage({
                 </Card>
               )}
             </div>
-          )}
-          {!entrega && !puedeCrearEntrega && !ofrecerEntregaLocal && (
-            <p className="text-sm text-text-muted">
-              La solicitud debe estar aprobada para generar una entrega.
-            </p>
           )}
 
           {entrega && (
@@ -580,15 +681,13 @@ export default async function DetalleSolicitudPage({
       {!puedeGestionarEntregas && (tipoAyuda?.requiere_entrega ?? false) && (
         <section className="space-y-3">
           <h2 className="font-medium text-text-primary">Entrega</h2>
+          <PasosEntrega pasos={pasosEntrega} proximoPaso={proximoPaso} />
 
           {!entregaLectura && ofrecerEntregaLocal && (
             <div className="space-y-2">
               <OpcionEntregaLocal action={registrarEntregaLocalConId} requiereEvidencia={requiereEvidencia} />
               <p className="text-sm text-text-muted">La entrega a domicilio la programa bodega/logística.</p>
             </div>
-          )}
-          {!entregaLectura && !ofrecerEntregaLocal && (
-            <p className="text-sm text-text-muted">Sin entrega generada todavía.</p>
           )}
           {entregaLectura && (
             <div className="space-y-3">

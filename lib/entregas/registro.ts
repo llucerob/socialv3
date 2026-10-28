@@ -1,5 +1,6 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
+import { ERROR_SIN_SALIDA_STOCK, MENSAJE_SIN_SALIDA_STOCK } from '@/lib/entregas/types'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -49,7 +50,11 @@ export async function aplicarResultadoEntregaSync(
       .eq('id', entrega.id)
 
     if (error) {
-      return { ok: false, conflicto: false, mensaje: 'No se pudo registrar la entrega.' }
+      // MR-07: el trigger rechaza marcarla realizada sin salida de stock.
+      const mensaje = error.message?.includes(ERROR_SIN_SALIDA_STOCK)
+        ? MENSAJE_SIN_SALIDA_STOCK
+        : 'No se pudo registrar la entrega.'
+      return { ok: false, conflicto: false, mensaje }
     }
     return { ok: true }
   }
@@ -73,7 +78,10 @@ export async function aplicarResultadoEntregaSync(
       .eq('id', entrega.id)
 
     if (error) {
-      return { ok: false, conflicto: true, mensaje: 'No se pudo aplicar la sincronización.' }
+      const mensaje = error.message?.includes(ERROR_SIN_SALIDA_STOCK)
+        ? MENSAJE_SIN_SALIDA_STOCK
+        : 'No se pudo aplicar la sincronización.'
+      return { ok: false, conflicto: true, mensaje }
     }
 
     await supabase.rpc('registrar_conflicto_sync_entrega', {

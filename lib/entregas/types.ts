@@ -126,3 +126,9 @@ export type EntregaPendienteDashboard = {
   fecha_programada: string | null
   ruta: string
 }
+
+// MR-07: trigger entregas_exigir_salida_stock (crear una entrega o marcarla
+// realizada sin salida de stock registrada).
+export const ERROR_SIN_SALIDA_STOCK = 'SIN_SALIDA_STOCK'
+export const MENSAJE_SIN_SALIDA_STOCK =
+  'Falta registrar la salida de stock: bodega debe registrarla en la solicitud antes de entregar la ayuda.'

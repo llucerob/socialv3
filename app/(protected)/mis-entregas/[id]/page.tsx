@@ -5,6 +5,7 @@ import { obtenerEntrega } from '@/lib/entregas/dal'
 import { registrarEntregaRealizada, registrarEntregaFallida } from '@/lib/entregas/actions'
 import { obtenerSolicitud } from '@/lib/solicitudes/dal'
 import { obtenerTipoAyuda } from '@/lib/ayudas/dal'
+import { tieneSalidaStock } from '@/lib/inventario/dal'
 import { listarMotivosEntregaFallidaActivos } from '@/lib/motivos-entrega/dal'
 import { enlaceMapa } from '@/lib/rutas/mapas'
 import { EntregaRealizadaForm } from '../entrega-realizada-form'
@@ -40,6 +41,9 @@ export default async function MiEntregaPage({
   const tipoAyuda = solicitud ? await obtenerTipoAyuda(solicitud.tipo_ayuda_id) : null
   const requiereEvidencia = Boolean(tipoAyuda?.requiere_evidencia)
   const motivosActivos = entrega.estado === 'pendiente' ? await listarMotivosEntregaFallidaActivos() : []
+  // MR-07: sin salida de stock registrada no se puede marcar realizada
+  // (trigger entregas_exigir_salida_stock); fallida sí.
+  const salidaRegistrada = entrega.estado === 'pendiente' ? await tieneSalidaStock(entrega.solicitud_id) : true
 
   const registrarRealizadaConId = registrarEntregaRealizada.bind(null, id)
   const registrarFallidaConId = registrarEntregaFallida.bind(null, id)
@@ -63,7 +67,14 @@ export default async function MiEntregaPage({
 
       {entrega.estado === 'pendiente' && (
         <div className="space-y-8">
-          <EntregaRealizadaForm action={registrarRealizadaConId} requiereEvidencia={requiereEvidencia} />
+          {salidaRegistrada ? (
+            <EntregaRealizadaForm action={registrarRealizadaConId} requiereEvidencia={requiereEvidencia} />
+          ) : (
+            <p role="alert" className="rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-fg">
+              Bodega todavía no registra la salida de stock de esta ayuda, así que aún no se puede marcar como
+              entregada. Avísale a bodega antes de salir a entregarla.
+            </p>
+          )}
           <div className="border-t border-border pt-6">
             <h2 className="mb-3 text-sm font-medium text-text-muted">¿No se pudo entregar?</h2>
             <EntregaFallidaForm action={registrarFallidaConId} motivos={motivosActivos} />

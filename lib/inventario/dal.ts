@@ -50,3 +50,18 @@ export async function listarMovimientosDeSolicitud(
     }
   })
 }
+
+// MR-07: una entrega exige la salida de stock registrada. Vía función
+// security definer porque gestor social, aprobador y terreno no leen
+// movimientos_stock; solo devuelve qué solicitudes tienen salida.
+export async function solicitudesConSalidaStock(solicitudIds: string[]): Promise<Set<string>> {
+  if (solicitudIds.length === 0) return new Set()
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('solicitudes_con_salida_stock', { p_solicitud_ids: solicitudIds })
+  if (error) throw error
+  return new Set((data as string[] | null) ?? [])
+}
+
+export async function tieneSalidaStock(solicitudId: string): Promise<boolean> {
+  return (await solicitudesConSalidaStock([solicitudId])).has(solicitudId)
+}

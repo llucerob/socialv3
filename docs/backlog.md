@@ -644,3 +644,16 @@ Al terminar este backlog MVP, el sistema permitirá, además de todo lo ya cubie
 - Las entregas en local no aparecen en "Mis entregas", "Rutas" ni en la caché offline de terreno. Sí aparecen en el listado de entregas, el historial del hogar ("Ayudas entregadas") y el detalle de la solicitud, con su modalidad.
 - La salida de stock sigue siendo un paso aparte de bodega (US-11.03), igual que en la entrega a domicilio.
 - La regla se valida en la base (función `registrar_entrega_local`), no solo en la pantalla: rol, solicitud aprobada, tipo de ayuda que permite entrega en local y entrega no realizada todavía.
+
+### MR-07 ✅ — La entrega exige salida de stock y el sistema guía cómo marcar "entregada"
+**Relacionada con:** US-11.03, US-12.01, US-12.04, US-27.03, MR-06.
+**Pedido:** (1) la entrega debe exigir que la salida de stock esté registrada; (2) el sistema no indica cómo marcar una ayuda como "entregada".
+**Criterios de aceptación:**
+- **Salida de stock obligatoria.** Una ayuda con entrega física no se puede entregar sin que bodega haya registrado su salida de stock:
+  - no se puede registrar una entrega en local ni programar una entrega a domicilio sin salida registrada;
+  - terreno no puede marcar como realizada una entrega a domicilio sin salida (cubre las entregas ya programadas antes de esta regla); marcarla como fallida sí se puede;
+  - la regla vive en la base (trigger sobre `entregas`), así que aplica igual a la pantalla, la sincronización offline y cualquier acceso directo, con un mensaje claro: "falta registrar la salida de stock".
+- **Guía de pasos en la solicitud.** La sección "Entrega" muestra los pasos para completar la ayuda, con su estado y quién los hace: aprobada → salida de stock (bodega) → entrega (en local o a domicilio) → entregada. Debajo, el **próximo paso** concreto para el estado actual: qué falta, quién lo hace y dónde.
+  - Con una entrega a domicilio pendiente se indica que la marca como entregada el funcionario de terreno asignado, desde "Mis entregas"; el administrador tiene además un botón para registrar el resultado.
+  - El botón de la entrega en local dice "Marcar como entregada".
+- **Terreno.** Si a una entrega asignada le falta la salida de stock, "Mis entregas" lo avisa y no ofrece "Marcar como realizada" hasta que bodega la registre.

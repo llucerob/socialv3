@@ -12,7 +12,7 @@ type EntregaLocalAction = (state: EntregaLocalFormState, formData: FormData) => 
 export function EntregaLocalForm({
   action,
   requiereEvidencia,
-  submitLabel = 'Registrar entrega en local',
+  submitLabel = 'Marcar como entregada',
 }: {
   action: EntregaLocalAction
   requiereEvidencia: boolean
