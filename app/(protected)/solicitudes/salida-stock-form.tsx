@@ -73,7 +73,7 @@ export function SalidaStockForm({
       </div>
 
       <Button type="submit" disabled={pending}>
-        {pending ? 'Registrando…' : 'Registrar salida'}
+        {pending ? 'Registrando…' : 'Registrar retiro de bodega'}
       </Button>
 
       {state?.error && (

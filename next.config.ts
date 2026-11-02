@@ -29,6 +29,20 @@ const nextConfig: NextConfig = {
   // comportamiento); el build de producción usa `--webpack` explícito
   // (package.json) para que next-pwa sí genere el service worker.
   turbopack: {},
+  experimental: {
+    // Los documentos y la foto de evidencia de la entrega se suben por
+    // Server Action (y por /api/mis-entregas/[id]/realizada en la
+    // sincronización offline). Por defecto Next corta el cuerpo de una
+    // Server Action en 1 MB, y una foto de celular pesa más: la entrega
+    // fallaba. Se alinea con el tope de 50 MB de lib/documentos/actions.ts
+    // y supabase/config.toml, con margen para el overhead de multipart.
+    // `proxyClientMaxBodySize` (10 MB por defecto) es el búfer de proxy.ts:
+    // sobre ese tope el cuerpo llega truncado a la acción o a la ruta API.
+    serverActions: {
+      bodySizeLimit: "51mb",
+    },
+    proxyClientMaxBodySize: "51mb",
+  },
 };
 
 export default withPWA(nextConfig);

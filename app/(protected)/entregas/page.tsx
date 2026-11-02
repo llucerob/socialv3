@@ -102,7 +102,7 @@ export default async function EntregasPage({
                   <span className="flex shrink-0 items-center gap-2">
                     {p.es_excepcion && <BadgeExcepcion texto="Excepción RSH" />}
                     <span className={p.salida_registrada ? 'text-success-fg' : 'text-warning-fg'}>
-                      {p.salida_registrada ? 'Salida registrada' : 'Falta salida de stock'}
+                      {p.salida_registrada ? 'Retiro de bodega registrado' : 'Falta retiro de bodega'}
                     </span>
                     {p.estado_entrega && (
                       <span className="text-text-muted">· {ESTADO_ENTREGA_LABELS[p.estado_entrega]}</span>

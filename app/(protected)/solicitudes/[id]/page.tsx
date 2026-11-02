@@ -425,7 +425,7 @@ export default async function DetalleSolicitudPage({
       estado: aprobada ? 'hecho' : 'actual',
     },
     {
-      titulo: 'Salida de stock',
+      titulo: 'Retiro de bodega',
       responsable: 'Bodega / logística',
       // Entregas anteriores a MR-07 pueden no tenerla: se muestra que falta,
       // no como paso en curso.
@@ -483,11 +483,11 @@ export default async function DetalleSolicitudPage({
   } else if (!aprobada) {
     proximoPaso = 'la solicitud debe aprobarse antes de preparar la entrega.'
   } else if (solicitud.estado === 'pendiente_stock') {
-    proximoPaso = 'no hay stock suficiente. Bodega debe registrar la salida en la sección «Stock» cuando llegue la mercadería.'
+    proximoPaso = 'no hay stock suficiente. Bodega debe registrar el retiro en la sección «Retiro de bodega» cuando llegue la mercadería.'
   } else if (!salidaRegistrada) {
     proximoPaso = puedeVerStock
-      ? 'registra la salida de stock en la sección «Stock», más arriba. Sin ella no se puede entregar.'
-      : 'bodega debe registrar la salida de stock de esta solicitud. Sin ella no se puede entregar.'
+      ? 'registra el retiro en la sección «Retiro de bodega», más arriba. Sin él no se puede entregar.'
+      : 'bodega debe registrar el retiro de bodega de esta solicitud. Sin él no se puede entregar.'
   } else if (!datosEntrega && beneficio?.modalidad === 'local') {
     proximoPaso = ofrecerEntregaLocal
       ? 'beneficio en local: cuando la persona venga a retirar, usa «Marcar como entregada».'
@@ -662,10 +662,10 @@ export default async function DetalleSolicitudPage({
 
       {puedeVerStock && (
         <section className="space-y-3">
-          <h2 className="font-medium text-text-primary">Stock</h2>
+          <h2 className="font-medium text-text-primary">Retiro de bodega</h2>
           {beneficio && etiquetaPeriodoActual && (
             <p className="text-sm text-text-primary">
-              Salida del período <span className="font-medium">{etiquetaPeriodoActual}</span>
+              Retiro del período <span className="font-medium">{etiquetaPeriodoActual}</span>
               {salidaRegistrada ? ': ya registrada.' : '.'} Cada período se descuenta por separado.
             </p>
           )}
@@ -675,7 +675,7 @@ export default async function DetalleSolicitudPage({
             <p className="text-sm text-text-muted">
               {puedeRegistrarSalidaStock
                 ? 'Este período no se puede preparar: todavía no comienza o el beneficio no está vigente.'
-                : 'La solicitud debe estar aprobada para registrar una salida de stock.'}
+                : 'La solicitud debe estar aprobada para registrar el retiro de bodega.'}
             </p>
           )}
           {movimientosStock.length > 0 && (

@@ -140,4 +140,4 @@ export type EntregaPendienteDashboard = {
 // realizada sin salida de stock registrada).
 export const ERROR_SIN_SALIDA_STOCK = 'SIN_SALIDA_STOCK'
 export const MENSAJE_SIN_SALIDA_STOCK =
-  'Falta registrar la salida de stock: bodega debe registrarla en la solicitud antes de entregar la ayuda.'
+  'Falta registrar el retiro de bodega: bodega debe registrarlo en la solicitud antes de entregar la ayuda.'

@@ -164,7 +164,7 @@ export async function registrarSalidaStock(
   }
 
   if (!ESTADOS_VALIDOS_SALIDA.includes(solicitud.estado)) {
-    return { error: 'La solicitud debe estar aprobada para registrar una salida de stock.', valores }
+    return { error: 'La solicitud debe estar aprobada para registrar el retiro de bodega.', valores }
   }
 
   const { error: errorInsert } = await supabase.from('movimientos_stock').insert({
@@ -189,7 +189,7 @@ export async function registrarSalidaStock(
       }
     }
     return {
-      error: mensajeErrorBeneficio(errorInsert.message) ?? 'No se pudo registrar la salida de stock.',
+      error: mensajeErrorBeneficio(errorInsert.message) ?? 'No se pudo registrar el retiro de bodega.',
       valores,
     }
   }

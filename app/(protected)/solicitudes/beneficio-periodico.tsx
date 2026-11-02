@@ -43,7 +43,7 @@ function estadoPeriodo(periodo: PeriodoBeneficio): string {
         ? ESTADO_ENTREGA_LABELS[periodo.estado_entrega]
         : periodo.salida_registrada
           ? 'Listo para entregar'
-          : 'Falta salida de stock'
+          : 'Falta retiro de bodega'
       return `${estado}${plazo}`
     }
   }
